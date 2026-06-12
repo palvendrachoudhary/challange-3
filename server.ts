@@ -5,6 +5,7 @@
 
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
@@ -16,6 +17,123 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+
+const BUDGET_FILE = path.join(process.cwd(), 'api_usage_budget.json');
+const BUDGET_LIMIT_USD = 1.00;
+
+// Stable cost monitoring counters
+let budgetState = {
+  totalCostUsd: 0.0,
+  requestCount: 0,
+};
+
+function loadBudget() {
+  try {
+    if (fs.existsSync(BUDGET_FILE)) {
+      const data = fs.readFileSync(BUDGET_FILE, 'utf8');
+      const parsed = JSON.parse(data);
+      if (typeof parsed.totalCostUsd === 'number') {
+        budgetState.totalCostUsd = parsed.totalCostUsd;
+      }
+      if (typeof parsed.requestCount === 'number') {
+        budgetState.requestCount = parsed.requestCount;
+      }
+    }
+  } catch (err) {
+    console.warn('[Budget Warning] Failed to parse budget ledger file, using default trackers:', err);
+  }
+}
+
+function saveBudget() {
+  try {
+    fs.writeFileSync(BUDGET_FILE, JSON.stringify(budgetState, null, 2), 'utf8');
+  } catch (err) {
+    console.warn('[Budget Warning] Ledger save failed:', err);
+  }
+}
+
+// Bind state on startup
+loadBudget();
+
+function addUsage(promptTokens: number, candidateTokens: number) {
+  // Input: $0.075 per 1M tokens ($0.000000075)
+  // Output: $0.30 per 1M tokens ($0.000000300)
+  const inputCost = promptTokens * 0.000000075;
+  const outputCost = candidateTokens * 0.000000300;
+  const totalCost = inputCost + outputCost;
+
+  budgetState.totalCostUsd += totalCost;
+  budgetState.requestCount += 1;
+  saveBudget();
+  console.log(`[EcoTrace Quota Manager] Prompt tokens: ${promptTokens}, Response tokens: ${candidateTokens}. Cost: $${totalCost.toFixed(6)}. Cumulative state: $${budgetState.totalCostUsd.toFixed(6)} / $${BUDGET_LIMIT_USD.toFixed(2)}`);
+}
+
+function getBudgetResponse() {
+  return {
+    totalCostUsd: Number(budgetState.totalCostUsd.toFixed(6)),
+    limitUsd: BUDGET_LIMIT_USD,
+    requestCount: budgetState.requestCount,
+    isLimitReached: budgetState.totalCostUsd >= BUDGET_LIMIT_USD
+  };
+}
+
+// IP rate limiter tracking record
+const rateLimits: Record<string, { timestamps: number[] }> = {};
+
+function rateLimitMiddleware(req: any, res: any, next: any) {
+  const ip = req.ip || req.headers['x-forwarded-for'] || '127.0.0.1';
+  const now = Date.now();
+  const windowMs = 15 * 60 * 1000; // 15 min window
+  const limit = 30; // 30 calls maximum
+
+  if (!rateLimits[ip]) {
+    rateLimits[ip] = { timestamps: [] };
+  }
+
+  rateLimits[ip].timestamps = rateLimits[ip].timestamps.filter(t => now - t < windowMs);
+
+  if (rateLimits[ip].timestamps.length >= limit) {
+    return res.status(429).json({ 
+      error: 'Security alert: IP rate limit exceeded. Requests are capped at 30 per 15 minutes.' 
+    });
+  }
+
+  rateLimits[ip].timestamps.push(now);
+  next();
+}
+
+// Inputs parser validator to prevent Prompt Injection attempts
+function sanitizeInput(text: any): string {
+  if (typeof text !== 'string') return '';
+  let sanitized = text;
+  
+  const suspiciousKeywords = [
+    /ignore previous/gi,
+    /system instruction/gi,
+    /ignore instructions/gi,
+    /ignore all/gi,
+    /bypass rules/gi,
+    /override rules/gi,
+    /api key/gi,
+    /process\.env/gi
+  ];
+  
+  for (const regex of suspiciousKeywords) {
+    sanitized = sanitized.replace(regex, '[CLEANED]');
+  }
+  
+  return sanitized.substring(0, 150).trim();
+}
+
+// Error logger that redacts any credential string leaks
+function safeErrorLog(message: string, error: any) {
+  let errStr = String(error?.stack || error?.message || error);
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (apiKey && apiKey.length > 5) {
+    errStr = errStr.replaceAll(apiKey, '[REDACTED_API_KEY]');
+  }
+  console.error(`${message}:`, errStr);
+}
 
 // Lazy-initialization helper for GoogleGenAI
 function getGenAIClient(): GoogleGenAI | null {
@@ -80,18 +198,26 @@ function calculateLocalBaseline(quiz: any) {
 }
 
 // REST route: POST /api/onboarding/profile
-app.post('/api/onboarding/profile', async (req, res) => {
+app.post('/api/onboarding/profile', rateLimitMiddleware, async (req, res) => {
   try {
     const quiz = req.body;
     if (!quiz) {
       return res.status(400).json({ error: 'Quiz payload is required' });
     }
 
+    // Sanitize user inputs to shield against command injections
+    quiz.diet = sanitizeInput(quiz.diet);
+    quiz.commuteMode = sanitizeInput(quiz.commuteMode);
+    quiz.homeEnergy = sanitizeInput(quiz.homeEnergy);
+    quiz.homeSize = sanitizeInput(quiz.homeSize);
+    quiz.shoppingHabits = sanitizeInput(quiz.shoppingHabits);
+
     const localStats = calculateLocalBaseline(quiz);
     const ai = getGenAIClient();
+    const budgetReached = budgetState.totalCostUsd >= BUDGET_LIMIT_USD;
 
-    if (!ai) {
-      // Return beautiful, accurate simulated onboarding response
+    if (!ai || budgetReached) {
+      // Return creative simulated onboarding response
       const personaName = quiz.commuteMode === 'walk-cycle' ? 'Active Eco-Explorer' :
                           quiz.diet === 'vegan' ? 'Green Plate Pioneer' : 'Mindful Consumer';
 
@@ -101,7 +227,7 @@ app.post('/api/onboarding/profile', async (req, res) => {
           baselineScore: localStats.baselineScore,
           baselineBreakdown: localStats.baselineBreakdown,
           targetScore: Math.round((localStats.baselineScore * 0.75) * 10) / 10, // 25% reduction target
-          personalizedWelcome: `Welcome to EcoTrace! Based on your 2-minute onboarding profile, your primary impact area comes from **${localStats.baselineBreakdown.home > localStats.baselineBreakdown.travel ? 'Home Energy' : 'Travel & Commutes'}**. Fortunately, simple micro-habits like switching to energy savers and habit stacking can reduce your carbon footprint by up to 25%!`,
+          personalizedWelcome: `Welcome to EcoTrace! Based on your 2-minute onboarding profile, your primary impact area comes from **${localStats.baselineBreakdown.home > localStats.baselineBreakdown.travel ? 'Home Energy' : 'Travel & Commutes'}**. Fortunately, simple micro-habits like switching to energy savers can reduce your carbon footprint by up to 25%! (Calculator running locally ${budgetReached ? 'due to safety spending caps' : 'due to key settings'}).`,
           initialHabits: [
             quiz.commuteMode === 'car' ? 'Walk or bike for short trips under 1.5 miles' : 'Turn down home thermostat by 1°C',
             quiz.diet === 'high-meat' ? 'Introduce Meatless Mondays into your weekly meal planning' : 'Unplug your home electronics and game consoles before bed',
@@ -109,6 +235,7 @@ app.post('/api/onboarding/profile', async (req, res) => {
           ],
         },
         isFallbackActive: true,
+        apiBudget: getBudgetResponse()
       });
     }
 
@@ -134,7 +261,7 @@ app.post('/api/onboarding/profile', async (req, res) => {
         Requirements: Return JSON format strictly.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
+        model: 'gemini-flash-latest',
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -165,6 +292,14 @@ app.post('/api/onboarding/profile', async (req, res) => {
         },
       });
 
+      // Track exact or estimated budget cost
+      const usage = response.usageMetadata;
+      if (usage) {
+        addUsage(usage.promptTokenCount || 0, usage.candidatesTokenCount || 0);
+      } else {
+        addUsage(1500, 300);
+      }
+
       const parsed = JSON.parse(response.text || '{}');
       // Ensure numeric alignments
       const total = Math.round(parsed.baselineScore * 10) / 10;
@@ -187,9 +322,10 @@ app.post('/api/onboarding/profile', async (req, res) => {
           ],
         },
         isFallbackActive: false,
+        apiBudget: getBudgetResponse()
       });
     } catch (aiError: any) {
-      console.warn('[EcoTrace Onboarding Warning] Gemini unavailable or experiencing 503 overload. Falling back to local calculator engine.', aiError);
+      safeErrorLog('[EcoTrace Onboarding Warning] Gemini blocked or overloaded. Falling back to local calculator', aiError);
       const personaName = quiz.commuteMode === 'walk-cycle' ? 'Active Eco-Explorer' :
                           quiz.diet === 'vegan' ? 'Green Plate Pioneer' : 'Mindful Consumer';
 
@@ -199,7 +335,7 @@ app.post('/api/onboarding/profile', async (req, res) => {
           baselineScore: localStats.baselineScore,
           baselineBreakdown: localStats.baselineBreakdown,
           targetScore: Math.round((localStats.baselineScore * 0.75) * 10) / 10,
-          personalizedWelcome: `Welcome to EcoTrace! Based on your 2-minute onboarding profile, your primary impact area comes from **${localStats.baselineBreakdown.home > localStats.baselineBreakdown.travel ? 'Home Energy' : 'Travel & Commutes'}**. Fortunately, simple micro-habits like switching to energy savers and habit stacking can reduce your carbon footprint by up to 25%!`,
+          personalizedWelcome: `Welcome to EcoTrace! Based on your onboarding details, your primary impact area is **${localStats.baselineBreakdown.home > localStats.baselineBreakdown.travel ? 'Home Energy' : 'Travel & Commutes'}**. Fortunately, basic habits like solar/electric swaps can lower this significantly!`,
           initialHabits: [
             quiz.commuteMode === 'car' ? 'Walk or bike for short trips under 1.5 miles' : 'Turn down home thermostat by 1°C',
             quiz.diet === 'high-meat' ? 'Introduce Meatless Mondays into your meal planning' : 'Unplug home electronics and consoles before bed',
@@ -207,24 +343,36 @@ app.post('/api/onboarding/profile', async (req, res) => {
           ],
         },
         isFallbackActive: true,
+        apiBudget: getBudgetResponse()
       });
     }
   } catch (error: any) {
-    console.error('[EcoTrace AI Baseline Error]:', error);
+    safeErrorLog('[EcoTrace AI Baseline Error]', error);
     res.status(500).json({ error: 'Server computation error: ' + error.message });
   }
-});
-
-// REST route: POST /api/insights/generate
-app.post('/api/insights/generate', async (req, res) => {
+});// REST route: POST /api/insights/generate
+app.post('/api/insights/generate', rateLimitMiddleware, async (req, res) => {
   try {
-    const { profile, ecoPoints, streakCount, habits, manualLogs, integrations, transactions, bills, commutes } = req.body;
+    const { 
+      profile, 
+      ecoPoints, 
+      streakCount, 
+      habits = [], 
+      manualLogs, 
+      utilityConnected = false, 
+      bankingConnected = false, 
+      fitnessConnected = false, 
+      transactions = [], 
+      bills = [], 
+      commutes = [] 
+    } = req.body;
 
     if (!profile) {
       return res.status(400).json({ error: 'Profile is needed for AI feedback' });
     }
 
     const ai = getGenAIClient();
+    const budgetReached = budgetState.totalCostUsd >= BUDGET_LIMIT_USD;
 
     // Default mock data solver
     const generateLocalInsights = (): any => {
@@ -248,7 +396,7 @@ app.post('/api/insights/generate', async (req, res) => {
       ];
 
       // Add a dynamic alert if they have gas bills or driving fuel transactions
-      if (integrations.utilityConnected && bills && bills.length > 0) {
+      if (utilityConnected && bills && bills.length > 0) {
         insightsList.push({
           id: 'insight-3',
           type: 'anomaly',
@@ -275,24 +423,25 @@ app.post('/api/insights/generate', async (req, res) => {
           'Stack: When returning home in a car, log short-distance driving instantly and plan to cluster shopping runs.',
           'Stack: If starting to prep steak, match it with 1 completely meat-and-dairy-free lunch.'
         ],
-        isFallbackActive: true
+        isFallbackActive: true,
+        apiBudget: getBudgetResponse()
       };
     };
 
-    if (!ai) {
+    if (!ai || budgetReached) {
       return res.json(generateLocalInsights());
     }
 
     // Call Gemini with rich real-time context
-    const completedHabits = habits.filter((h: any) => h.completed).map((h: any) => h.text).join(', ');
+    const completedHabits = habits.filter((h: any) => h.completed).map((h: any) => sanitizeInput(h.text)).join(', ');
     const activeIntegrations = [
-      integrations.utilityConnected ? 'Utility Provider API' : '',
-      integrations.bankingConnected ? 'Open Banking' : '',
-      integrations.fitnessConnected ? 'GPS Fitness/Smartphone Health' : ''
+      utilityConnected ? 'Utility Provider API' : '',
+      bankingConnected ? 'Open Banking' : '',
+      fitnessConnected ? 'GPS Fitness/Smartphone Health' : ''
     ].filter(Boolean).join(', ') || 'No automation integrations connected yet';
 
-    const recentTransactions = transactions.slice(0, 5).map((t: any) => `${t.merchant} (${t.category}): ${t.carbonImpactKg}kg CO2`).join('\n');
-    const recentCommutes = commutes.slice(0, 3).map((c: any) => `${c.mode} for ${c.distanceMiles} miles: ${c.carbonImpactKg}kg CO2`).join('\n');
+    const recentTransactions = transactions.slice(0, 5).map((t: any) => `${sanitizeInput(t.merchant)} (${sanitizeInput(t.category)}): ${t.carbonImpactKg}kg CO2`).join('\n');
+    const recentCommutes = commutes.slice(0, 3).map((c: any) => `${sanitizeInput(c.mode)} for ${c.distanceMiles} miles: ${c.carbonImpactKg}kg CO2`).join('\n');
 
     const prompt = `Analyze this live eco tracker state and provide:
       1. Exactly 3 assessable insights with types ('insight' | 'anomaly' | 'forecast'). Frame them constructively with positive reinforcement. Format with visual urgency color ('green', 'yellow', or 'red').
@@ -313,7 +462,7 @@ app.post('/api/insights/generate', async (req, res) => {
     // Try to call Gemini, with immediate fallback on any API error or 503 overload
     try {
       const response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
+        model: 'gemini-flash-latest',
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -347,20 +496,34 @@ app.post('/api/insights/generate', async (req, res) => {
         },
       });
 
+      // Account spending
+      const usage = response.usageMetadata;
+      if (usage) {
+        addUsage(usage.promptTokenCount || 0, usage.candidatesTokenCount || 0);
+      } else {
+        addUsage(1800, 450);
+      }
+
       const parsed = JSON.parse(response.text || '{}');
       res.json({
         ...parsed,
-        isFallbackActive: false
+        isFallbackActive: false,
+        apiBudget: getBudgetResponse()
       });
     } catch (aiError: any) {
-      console.warn('[EcoTrace Insights Warning] Gemini unavailable or experiencing 503 overload. Falling back to local formula insights.', aiError);
+      safeErrorLog('[EcoTrace Insights Warning] Gemini unavailable or experiencing overload. Falling back to local formula insights', aiError);
       res.json(generateLocalInsights());
     }
 
   } catch (error: any) {
-    console.error('[EcoTrace AI Insights Error]:', error);
+    safeErrorLog('[EcoTrace AI Insights Error]', error);
     res.status(500).json({ error: 'Server evaluation error: ' + error.message });
   }
+});
+
+// REST route: GET /api/budget
+app.get('/api/budget', (req, res) => {
+  res.json(getBudgetResponse());
 });
 
 // Serve API routes first, then Vite assets / SPA HTML

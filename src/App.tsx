@@ -10,6 +10,11 @@ import EmissionsCharts from './components/EmissionsCharts';
 import IntegrationsPanel from './components/IntegrationsPanel';
 import CommunityShop from './components/CommunityShop';
 import { 
+  deriveTenantRowKey, 
+  signState, 
+  verifyStateIntegrity 
+} from './utils/security';
+import { 
   Leaf, 
   Flame, 
   Award, 
@@ -25,7 +30,11 @@ import {
   LogOut,
   Moon,
   Sun,
-  Laptop
+  Laptop,
+  Shield,
+  Lock,
+  User,
+  UserPlus
 } from 'lucide-react';
 
 const INITIAL_HABIT_TASKS: HabitTask[] = [
@@ -74,25 +83,55 @@ const INITIAL_CHALLENGES = [
   }
 ];
 
+const initializeNewTenantState = (): UserEcoState => ({
+  profile: null,
+  habits: INITIAL_HABIT_TASKS,
+  loggedActionsCount: 0,
+  ecoPoints: 10,
+  streakCount: 3,
+  lastActiveDate: null,
+  utilityConnected: false,
+  bankingConnected: false,
+  fitnessConnected: false,
+  manualLogs: { foodEmissionsKg: 0, wasteKg: 0 },
+  transactions: [],
+  bills: [],
+  commutes: [],
+  challenges: INITIAL_CHALLENGES,
+  aiInsights: null,
+  aiInsightsLoading: false,
+});
+
 export default function App() {
-  const [state, setState] = useState<UserEcoState>({
-    profile: null,
-    habits: INITIAL_HABIT_TASKS,
-    loggedActionsCount: 0,
-    ecoPoints: 10,
-    streakCount: 3,
-    lastActiveDate: null,
-    utilityConnected: false,
-    bankingConnected: false,
-    fitnessConnected: false,
-    manualLogs: { foodEmissionsKg: 0, wasteKg: 0 },
-    transactions: [],
-    bills: [],
-    commutes: [],
-    challenges: INITIAL_CHALLENGES,
-    aiInsights: null,
-    aiInsightsLoading: false,
+  const [activeUser, setActiveUser] = useState<string>(() => {
+    return localStorage.getItem('ecotrace_active_user_v1') || 'guest';
   });
+  const [activePin, setActivePin] = useState<string>(() => {
+    return localStorage.getItem('ecotrace_active_pin_v1') || '0000';
+  });
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
+    return localStorage.getItem('ecotrace_is_logged_in_v1') === 'true';
+  });
+  
+  // Auth Form Panel input states
+  const [authTab, setAuthTab] = useState<'signin' | 'signup' | 'guest'>('signin');
+  const [authUsername, setAuthUsername] = useState('');
+  const [authPin, setAuthPin] = useState('');
+  const [authPinConfirm, setAuthPinConfirm] = useState('');
+  const [authMessage, setAuthMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
+  
+  const [rlsSecurityAlert, setRlsSecurityAlert] = useState<string | null>(null);
+
+  const [state, setState] = useState<UserEcoState>(initializeNewTenantState());
+
+  const [apiBudget, setApiBudget] = useState({
+    totalCostUsd: 0.0,
+    limitUsd: 1.00,
+    requestCount: 0,
+    isLimitReached: false
+  });
+
+  const activeRowKey = deriveTenantRowKey(activeUser, activePin);
 
   // Manual Quick Logger States
   const [manualFoodSelected, setManualFoodSelected] = useState('veg');
@@ -100,24 +139,58 @@ export default function App() {
   const [customActionText, setCustomActionText] = useState('');
   const [customActionCategory, setCustomActionCategory] = useState<'home' | 'travel' | 'food' | 'shopping'>('home');
 
-  // Load from LocalStorage for persistence
+  // Load from LocalStorage for persistence on Partition Changes
   useEffect(() => {
-    const cached = localStorage.getItem('ecotrace_user_state_v1');
+    const cached = localStorage.getItem(activeRowKey);
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        setState(parsed);
+        if (verifyStateIntegrity(parsed)) {
+          setState(parsed);
+          setRlsSecurityAlert(null);
+          onQuickSuccessNotification(`Loaded private tenant row: ${activeUser}`);
+        } else {
+          setRlsSecurityAlert(`CRITICAL ERROR: Integrity checksum failed for cell partition of user [${activeUser}]. Loading safe quarantine state.`);
+          setState(initializeNewTenantState());
+        }
       } catch (err) {
-        console.warn('Stale localStorage cache found. Resetting state.');
+        console.warn('Corruption found in cached block, reseting...');
+        setState(initializeNewTenantState());
       }
+    } else {
+      setState(initializeNewTenantState());
     }
-  }, []);
+  }, [activeRowKey]);
+
+  // Pull budget status from server
+  const fetchBudgetStatus = async () => {
+    try {
+      const res = await fetch('/api/budget');
+      if (res.ok) {
+        const data = await res.json();
+        setApiBudget({
+          totalCostUsd: data.totalCostUsd || 0,
+          limitUsd: data.limitUsd || 1.00,
+          requestCount: data.requestCount || 0,
+          isLimitReached: !!data.isLimitReached
+        });
+      }
+    } catch (err) {
+      console.warn('Error reading budget details:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchBudgetStatus();
+  }, [activeRowKey]);
 
   // Sync to outer storage
   const updateState = (updates: Partial<UserEcoState>) => {
     setState((prev) => {
       const next = { ...prev, ...updates };
-      localStorage.setItem('ecotrace_user_state_v1', JSON.stringify(next));
+      const { signature } = signState(next);
+      const signedData = { ...next, signature };
+      localStorage.setItem(activeRowKey, JSON.stringify(signedData));
       return next;
     });
   };
@@ -162,11 +235,20 @@ export default function App() {
         throw new Error('AI Engine failed to compute current metrics.');
       }
 
-      const data: AIInsightsPayload = await response.json();
+      const data = await response.json();
       
+      if (data.apiBudget) {
+        setApiBudget(data.apiBudget);
+      }
+
       setState(prev => {
-        const next = { ...prev, aiInsights: data, aiInsightsLoading: false };
-        localStorage.setItem('ecotrace_user_state_v1', JSON.stringify(next));
+        const next = { 
+          ...prev, 
+          aiInsights: data, 
+          aiInsightsLoading: false 
+        };
+        const { signature } = signState(next);
+        localStorage.setItem(activeRowKey, JSON.stringify({ ...next, signature }));
         return next;
       });
     } catch (e) {
@@ -177,27 +259,23 @@ export default function App() {
 
   // Checkbox interactions
   const handleToggleHabit = (id: string) => {
-    const nextHabits = state.habits.map((h) => {
-      if (h.id === id) {
-        const nextComp = !h.completed;
-        const ptsDiff = nextComp ? h.points : -h.points;
-        const avoidedCO2 = nextComp ? h.co2SavedKg : -h.co2SavedKg;
+    const habit = state.habits.find(h => h.id === id);
+    if (!habit) return;
 
-        onQuickSuccessNotification(`Logged habit! ${ptsDiff > 0 ? '+' : ''}${ptsDiff} EcoPoints`);
-        
-        let newPoints = state.ecoPoints + ptsDiff;
-        let newLoggedCount = state.loggedActionsCount + (nextComp ? 1 : 0);
+    const nextComp = !habit.completed;
+    const ptsDiff = nextComp ? habit.points : -habit.points;
+    const countDiff = nextComp ? 1 : -1;
 
-        return { ...h, completed: nextComp };
-      }
-      return h;
-    });
+    onQuickSuccessNotification(`Logged habit! ${ptsDiff > 0 ? '+' : ''}${ptsDiff} EcoPoints`);
 
-    // Compute updated state attributes
+    const nextHabits = state.habits.map((h) => 
+      h.id === id ? { ...h, completed: nextComp } : h
+    );
+
     updateState({
       habits: nextHabits,
-      ecoPoints: Math.max(0, state.ecoPoints + (nextHabits.find(h => h.id === id)?.completed ? nextHabits.find(h => h.id === id)!.points : -nextHabits.find(h => h.id === id)!.points)),
-      loggedActionsCount: state.loggedActionsCount + (nextHabits.find(h => h.id === id)?.completed ? 1 : 0),
+      ecoPoints: Math.max(0, state.ecoPoints + ptsDiff),
+      loggedActionsCount: Math.max(0, state.loggedActionsCount + countDiff)
     });
   };
 
@@ -309,27 +387,133 @@ export default function App() {
   };
 
   const handleResetProfile = () => {
-    if (confirm('Are you sure you want to delete your EcoTrace profile? This resets all metrics.')) {
-      localStorage.removeItem('ecotrace_user_state_v1');
-      setState({
-        profile: null,
-        habits: INITIAL_HABIT_TASKS,
-        loggedActionsCount: 0,
-        ecoPoints: 10,
-        streakCount: 3,
-        lastActiveDate: null,
-        utilityConnected: false,
-        bankingConnected: false,
-        fitnessConnected: false,
-        manualLogs: { foodEmissionsKg: 0, wasteKg: 0 },
-        transactions: [],
-        bills: [],
-        commutes: [],
-        challenges: INITIAL_CHALLENGES,
-        aiInsights: null,
-        aiInsightsLoading: false,
-      });
+    if (confirm(`Are you sure you want to purge data for workspace partition [${activeUser}]? This completely wipes the state.`)) {
+      localStorage.removeItem(activeRowKey);
+      setState(initializeNewTenantState());
+      onQuickSuccessNotification('Workspace table wiped.');
     }
+  };
+
+  const handleLoginProcess = (usernameInput: string, pinInput: string) => {
+    setAuthMessage(null);
+    const trimmedUser = usernameInput.trim().toLowerCase();
+    const trimmedPin = pinInput.trim();
+    if (!trimmedUser || !trimmedPin) {
+      setAuthMessage({ type: 'error', text: 'Tenant ID and Access PIN cannot be empty.' });
+      return;
+    }
+
+    const rowKey = deriveTenantRowKey(trimmedUser, trimmedPin);
+    const cached = localStorage.getItem(rowKey);
+    if (!cached) {
+      setAuthMessage({ 
+        type: 'error', 
+        text: `Tenant workspace [${trimmedUser}] was not found under this PIN code. Please check your spelling or sign up as a new user!` 
+      });
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(cached);
+      if (verifyStateIntegrity(parsed)) {
+        localStorage.setItem('ecotrace_active_user_v1', trimmedUser);
+        localStorage.setItem('ecotrace_active_pin_v1', trimmedPin);
+        localStorage.setItem('ecotrace_is_logged_in_v1', 'true');
+        
+        setActiveUser(trimmedUser);
+        setActivePin(trimmedPin);
+        setIsLoggedIn(true);
+        setRlsSecurityAlert(null);
+        onQuickSuccessNotification(`Loaded private vault partition: ${trimmedUser}`);
+      } else {
+        setAuthMessage({ 
+          type: 'error', 
+          text: `RESOURCE INTEGRITY TAMPERED: signature mismatch on cell partition [${trimmedUser}]. Load aborted for security.` 
+        });
+      }
+    } catch (err) {
+      setAuthMessage({ type: 'error', text: 'Error parsing cryptographically sealed record block.' });
+    }
+  };
+
+  const handleRegisterProcess = (usernameInput: string, pinInput: string, pinConfirmInput: string) => {
+    setAuthMessage(null);
+    const trimmedUser = usernameInput.trim().toLowerCase();
+    const trimmedPin = pinInput.trim();
+    const trimmedPinConfirm = pinConfirmInput.trim();
+
+    if (!trimmedUser) {
+      setAuthMessage({ type: 'error', text: 'Tenant ID is required.' });
+      return;
+    }
+    if (!/^[a-z0-9_]{3,15}$/.test(trimmedUser)) {
+      setAuthMessage({ type: 'error', text: 'Tenant ID must be 3-15 lowercase letters, digits, or underscores.' });
+      return;
+    }
+    if (trimmedPin.length < 4) {
+      setAuthMessage({ type: 'error', text: 'Access PIN must be at least 4 characters.' });
+      return;
+    }
+    if (trimmedPin !== trimmedPinConfirm) {
+      setAuthMessage({ type: 'error', text: 'PIN codes do not match!' });
+      return;
+    }
+
+    const rowKey = deriveTenantRowKey(trimmedUser, trimmedPin);
+    const alreadyExists = localStorage.getItem(rowKey);
+    if (alreadyExists) {
+      setAuthMessage({ 
+        type: 'error', 
+        text: `The username [${trimmedUser}] is already provisioned in local storage. Choose a different ID or sign in.` 
+      });
+      return;
+    }
+
+    const freshState = initializeNewTenantState();
+    const { signature } = signState(freshState);
+    const signedData = { ...freshState, signature };
+    localStorage.setItem(rowKey, JSON.stringify(signedData));
+
+    localStorage.setItem('ecotrace_active_user_v1', trimmedUser);
+    localStorage.setItem('ecotrace_active_pin_v1', trimmedPin);
+    localStorage.setItem('ecotrace_is_logged_in_v1', 'true');
+
+    setActiveUser(trimmedUser);
+    setActivePin(trimmedPin);
+    setIsLoggedIn(true);
+    setRlsSecurityAlert(null);
+    onQuickSuccessNotification(`Provisioned and logged into partition: ${trimmedUser}`);
+  };
+
+  const handleContinueAsGuest = () => {
+    setAuthMessage(null);
+    const defaultUser = 'guest';
+    const defaultPin = '0000';
+    
+    localStorage.setItem('ecotrace_active_user_v1', defaultUser);
+    localStorage.setItem('ecotrace_active_pin_v1', defaultPin);
+    localStorage.setItem('ecotrace_is_logged_in_v1', 'true');
+
+    setActiveUser(defaultUser);
+    setActivePin(defaultPin);
+    setIsLoggedIn(true);
+    setRlsSecurityAlert(null);
+    onQuickSuccessNotification('Entered safe sandbox using Guest mode.');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('ecotrace_is_logged_in_v1');
+    localStorage.removeItem('ecotrace_active_user_v1');
+    localStorage.removeItem('ecotrace_active_pin_v1');
+    
+    setIsLoggedIn(false);
+    setActiveUser('guest');
+    setActivePin('0000');
+    setAuthUsername('');
+    setAuthPin('');
+    setAuthPinConfirm('');
+    setAuthMessage(null);
+    onQuickSuccessNotification('Successfully logged out of vault partition.');
   };
 
   const calculateActualCurrentScore = () => {
@@ -361,6 +545,252 @@ export default function App() {
 
   const currentScore = calculateActualCurrentScore();
 
+  // AUTHENTICATION VISUAL INTERFACE INTERCEPTOR
+  if (!isLoggedIn) {
+    return (
+      <div id="ecotrace-auth-root" className="min-h-screen bg-stone-50 flex flex-col justify-between text-gray-800 antialiased font-sans">
+        
+        {/* Toast Toast Notifications */}
+        {achievementMsg && (
+          <div id="auth-toast" className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-emerald-950 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-2 border border-emerald-500/30 font-bold text-xs font-mono">
+            <Sparkles className="w-5 h-5 text-yellow-400 animate-spin" />
+            <span>{achievementMsg}</span>
+          </div>
+        )}
+
+        {/* Minimal header */}
+        <header className="px-6 py-5 border-b border-gray-150 bg-white">
+          <div className="max-w-7xl mx-auto flex justify-between items-center">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 bg-gradient-to-tr from-emerald-600 to-teal-500 text-white rounded-xl shadow-md">
+                <Leaf className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-md font-black text-gray-950 tracking-tight leading-none flex items-center gap-1.5 uppercase">
+                  ECOTRACE <span className="text-[9px] font-mono uppercase bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-extrabold tracking-wide">SECURE</span>
+                </span>
+                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none mt-1">Smart Carbon Reducer</p>
+              </div>
+            </div>
+            <div className="text-[10px] text-gray-450 font-mono tracking-wider flex items-center gap-1">
+              <Shield className="w-3.5 h-3.5 text-emerald-650" /> SECURED END-TO-END CRYPTO PORTAL
+            </div>
+          </div>
+        </header>
+
+        {/* Auth card content */}
+        <main className="flex-1 flex items-center justify-center p-6 my-8">
+          <div className="w-full max-w-sm bg-white border border-gray-200/80 rounded-3xl p-8 shadow-sm space-y-6">
+            <div className="text-center space-y-2">
+              <div className="inline-flex p-3 bg-emerald-50 text-emerald-700 rounded-full">
+                <Shield className="w-6 h-6" />
+              </div>
+              <h1 className="text-lg font-bold tracking-tight text-gray-900">Secure Carbon Vault</h1>
+              <p className="text-xs text-gray-400 max-w-sm mx-auto leading-normal">
+                Sign in or create a private partitioned storage vault to secure your local carbon data.
+              </p>
+            </div>
+
+            {/* Tabs selector */}
+            <div className="flex bg-gray-100/80 p-1 rounded-xl">
+              <button
+                id="tab-signin-btn"
+                onClick={() => { setAuthTab('signin'); setAuthMessage(null); }}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  authTab === 'signin' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-500 hover:text-gray-950'
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                id="tab-signup-btn"
+                onClick={() => { setAuthTab('signup'); setAuthMessage(null); }}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  authTab === 'signup' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-500 hover:text-gray-950'
+                }`}
+              >
+                Sign Up
+              </button>
+              <button
+                id="tab-guest-btn"
+                onClick={() => { setAuthTab('guest'); setAuthMessage(null); }}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  authTab === 'guest' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-500 hover:text-gray-950'
+                }`}
+              >
+                Guest Box
+              </button>
+            </div>
+
+            {/* Error or successive status banner */}
+            {authMessage && (
+              <div 
+                id="auth-alert-message" 
+                className={`p-3 text-xs rounded-xl border flex items-start gap-2 ${
+                  authMessage.type === 'error' 
+                    ? 'bg-rose-50 border-rose-100/50 text-rose-850' 
+                    : 'bg-emerald-50 border-emerald-100/50 text-emerald-850'
+                }`}
+              >
+                <AlertCircle className={`w-4 h-4 shrink-0 mt-0.5 ${authMessage.type === 'error' ? 'text-rose-600' : 'text-emerald-600'}`} />
+                <span className="leading-relaxed font-medium">{authMessage.text}</span>
+              </div>
+            )}
+
+            {/* Forms body container */}
+            {authTab === 'signin' && (
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleLoginProcess(authUsername, authPin);
+                }}
+                className="space-y-4"
+              >
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block font-mono">Tenant ID / Username</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                    <input
+                      id="auth-username-in"
+                      type="text"
+                      required
+                      placeholder="e.g. user_alpha"
+                      value={authUsername}
+                      onChange={(e) => setAuthUsername(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-xl focus:border-gray-500 focus:outline-none focus:bg-white bg-gray-50/50 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block font-mono">Access PIN Code</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                    <input
+                      id="auth-pin-in"
+                      type="password"
+                      required
+                      placeholder="••••"
+                      value={authPin}
+                      onChange={(e) => setAuthPin(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-xl focus:border-gray-500 focus:outline-none focus:bg-white bg-gray-50/50 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  id="auth-submit-signin-btn"
+                  type="submit"
+                  className="w-full py-2.5 bg-gray-950 hover:bg-gray-805 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer hover:shadow-sm transition-all text-center flex items-center justify-center gap-1.5"
+                >
+                  <Lock className="w-3.5 h-3.5" /> Unlock Secure Partition
+                </button>
+              </form>
+            )}
+
+            {authTab === 'signup' && (
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleRegisterProcess(authUsername, authPin, authPinConfirm);
+                }}
+                className="space-y-4"
+              >
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase block font-mono">Choose Tenant ID</label>
+                  <div className="relative">
+                    <UserPlus className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                    <input
+                      id="auth-username-up"
+                      type="text"
+                      required
+                      placeholder="e.g. user_alpha"
+                      value={authUsername}
+                      onChange={(e) => setAuthUsername(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-xl focus:border-gray-500 focus:outline-none focus:bg-white bg-gray-50/50 font-mono"
+                    />
+                  </div>
+                  <p className="text-[9px] text-gray-400 leading-none mt-1">
+                    3-15 lowercase letters, digits, or underscores.
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase block font-mono">Access PIN Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                    <input
+                      id="auth-pin-up"
+                      type="password"
+                      required
+                      placeholder="••••"
+                      value={authPin}
+                      onChange={(e) => setAuthPin(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-xl focus:border-gray-500 focus:outline-none focus:bg-white bg-gray-50/50 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase block font-mono">Confirm PIN</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                    <input
+                      id="auth-pin-up-confirm"
+                      type="password"
+                      required
+                      placeholder="••••"
+                      value={authPinConfirm}
+                      onChange={(e) => setAuthPinConfirm(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-xl focus:border-gray-500 focus:outline-none focus:bg-white bg-gray-50/50 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  id="auth-submit-signup-btn"
+                  type="submit"
+                  className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-650 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer hover:shadow-sm transition-all text-center flex items-center justify-center gap-1.5"
+                >
+                  <Shield className="w-3.5 h-3.5" /> Initialize Private Database Row
+                </button>
+              </form>
+            )}
+
+            {authTab === 'guest' && (
+              <div className="space-y-4">
+                <div className="p-4 bg-gray-50 border border-gray-150 rounded-2xl space-y-2">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-gray-700">
+                    <User className="w-4 h-4 text-emerald-600" /> Sandbox Play area
+                  </div>
+                  <p className="text-[11px] text-gray-500 leading-normal">
+                    Guest mode loads an unencrypted workspace partition. Enjoy trying out carbon budgeting features without persistency.
+                  </p>
+                </div>
+
+                <button
+                  id="auth-submit-guest-btn"
+                  onClick={handleContinueAsGuest}
+                  className="w-full py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer hover:shadow-sm transition-all text-center flex items-center justify-center gap-1.5"
+                >
+                  Enter as Sandbox Guest
+                </button>
+              </div>
+            )}
+          </div>
+        </main>
+
+        {/* Footer */}
+        <footer className="py-8 text-center text-xs text-gray-400 border-t border-gray-150 bg-white">
+          <p className="font-bold tracking-wide">ECOTRACE SECURITY LAYER v1.20</p>
+          <p className="text-[10px] text-gray-400 max-w-sm mx-auto mt-1 leading-normal px-2">
+            Multi-Tenant Vault Ledger Separation protects row state against unauthorized access.
+          </p>
+        </footer>
+      </div>
+    );
+  }
+
   return (
     <div id="ecotrace-app-main-root" className="min-h-screen bg-neutral-50 text-gray-800 antialiased font-sans">
       
@@ -376,49 +806,79 @@ export default function App() {
       <header id="global-header" className="sticky top-0 z-45 bg-white/95 backdrop-blur border-b border-gray-100 px-6 py-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-gradient-to-tr from-emerald-600 to-teal-500 text-white rounded-xl shadow-md shadow-emerald-250">
+            <div className="p-2 bg-gradient-to-tr from-emerald-600 to-teal-500 text-white rounded-xl shadow-md">
               <Leaf className="w-5 h-5" />
             </div>
             <div>
               <span className="text-md font-black text-gray-900 tracking-tight leading-none flex items-center gap-1.5">
-                ECOTRACE <span className="text-[10px] font-mono uppercase bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-extrabold tracking-wide">BETA</span>
+                ECOTRACE <span className="text-[10px] font-mono uppercase bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-extrabold tracking-wide">SECURE</span>
               </span>
               <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none mt-1">Smart Carbon Reducer</p>
             </div>
           </div>
 
-          {state.profile ? (
-            <div className="flex items-center gap-4">
-              {/* Point Indicator */}
-              <div id="eco-points-badge" className="flex items-center gap-1.5 bg-emerald-50 text-emerald-800 px-3.5 py-1.5 rounded-full border border-emerald-100 text-xs font-bold font-mono shadow-sm">
-                <Award className="w-4 h-4 text-emerald-600" />
-                <span>{state.ecoPoints} Pts</span>
-              </div>
+          <div className="flex items-center gap-3">
+            {/* Active Vault Badge */}
+            <div className="hidden sm:flex items-center gap-1.5 bg-stone-100 border border-stone-200 text-stone-700 px-3 py-1.5 rounded-full text-xs font-mono font-bold">
+              <Shield className="w-3.5 h-3.5 text-emerald-600 font-bold" />
+              <span>Vault: <span className="text-stone-900 font-extrabold">{activeUser}</span></span>
+            </div>
 
-              {/* Streak Counter */}
-              <div id="streak-counter-badge" className="flex items-center gap-1.5 bg-orange-50 text-orange-850 px-3.5 py-1.5 rounded-full border border-orange-100 text-xs font-bold font-mono shadow-sm">
-                <Flame className="w-4 h-4 text-orange-500 animate-pulse" />
-                <span>{state.streakCount} Day Streak</span>
-              </div>
+            {state.profile ? (
+              <div className="flex items-center gap-3">
+                {/* Point Indicator */}
+                <div id="eco-points-badge" className="flex items-center gap-1.5 bg-emerald-50 text-emerald-850 px-3.5 py-1.5 rounded-full border border-emerald-100 text-xs font-bold font-mono shadow-xs">
+                  <Award className="w-4 h-4 text-emerald-600" />
+                  <span>{state.ecoPoints} Pts</span>
+                </div>
 
-              {/* Out logout */}
+                {/* Streak Counter */}
+                <div id="streak-counter-badge" className="flex items-center gap-1.5 bg-orange-50 text-orange-850 px-3.5 py-1.5 rounded-full border border-orange-100 text-xs font-bold font-mono shadow-xs">
+                  <Flame className="w-4 h-4 text-orange-500 animate-pulse" />
+                  <span>{state.streakCount} Days</span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-[10px] text-gray-400 font-mono tracking-wider">ONBOARDING PROFILE ACTIVE</div>
+            )}
+
+            {/* Lock Session / Logout Action and Workspace Wiping Button side by side */}
+            <div className="flex items-center border-l border-gray-150 pl-3 gap-1">
+              {state.profile && (
+                <button
+                  id="purge-profile-nav-btn"
+                  onClick={handleResetProfile}
+                  title="Wipe & Reset Profile Data"
+                  className="p-1 px-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer text-xs flex items-center"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+              )}
+
               <button
-                id="reset-profile-nav-btn"
-                onClick={handleResetProfile}
-                title="Reset Profile Setup"
-                className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                id="lock-partition-session-btn"
+                onClick={handleLogout}
+                title="Lock & Exit Vault Partition"
+                className="p-1 px-2 text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer text-xs flex items-center"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3.5 h-3.5" onClick={handleLogout} />
               </button>
             </div>
-          ) : (
-            <div className="text-[10px] text-gray-400 font-mono tracking-wider">SECURED END-TO-END DATA</div>
-          )}
+          </div>
         </div>
       </header>
 
       {/* Main Container Viewport */}
       <main className="max-w-7xl mx-auto px-6 py-8">
+        
+        {/* Row-Level Security Warning alert if integrity fails */}
+        {rlsSecurityAlert && (
+          <div id="rls-integrity-warning" className="mb-6 p-4 bg-rose-50 border border-rose-100 text-rose-800 font-bold text-xs rounded-2xl flex items-center gap-2.5 animate-pulse">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+            <span>{rlsSecurityAlert}</span>
+          </div>
+        )}
+
         {!state.profile ? (
           /* ONBOARDING FLOW PANEL */
           <div id="un-onboarded-workspace" className="space-y-12 py-6">
@@ -439,24 +899,6 @@ export default function App() {
         ) : (
           /* CORE DASHBOARD WORKSPACE */
           <div id="onboarded-workspace" className="space-y-8 animate-fade-in">
-            
-            {/* Dynamic AI Alert warning if Gemini operating in offline mode */}
-            {(!state.aiInsights || state.aiInsights.isFallbackActive) && (
-              <div id="offline-fallback-warning-badge" className="bg-yellow-50 text-yellow-800 border border-yellow-100 p-4 rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <div className="flex items-start gap-2.5 text-xs">
-                  <AlertCircle className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-bold">Offline Analytics Calculator Mode Active</h4>
-                    <p className="text-gray-500 leading-normal mt-0.5">
-                      The analyzer is utilizing industry formulas to compute carbon. Add your **GEMINI_API_KEY** in **Settings &gt; Secrets** to unlock advanced personalization!
-                    </p>
-                  </div>
-                </div>
-                <div className="inline-flex items-center gap-1 text-[10px] font-bold font-mono text-yellow-700 bg-white px-2.5 py-1 rounded-full shadow-sm">
-                  <Key className="w-3 h-3" /> SECURE ENV
-                </div>
-              </div>
-            )}
 
             {/* Profile Intro Greeting Badge */}
             <div id="welcome-profile-card" className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
