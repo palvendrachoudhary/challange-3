@@ -90,21 +90,7 @@ export default function OnboardingWizard({ onOnboardingComplete }: OnboardingWiz
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/onboarding/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(quiz),
-      });
-
-      if (!response.ok) {
-        throw new Error('Onboarding analysis failed. Please try again.');
-      }
-
-      const data = await response.json();
-      onOnboardingComplete(data.profile, data.isFallbackActive);
-    } catch (err: any) {
-      console.warn("API compute completely failed (likely static host/Netlify), using pure local fallback logic", err);
-      
+      // Perform calculation locally to avoid API calls on static deployment
       let home = 3.5; // Apartment default
       if (quiz.homeSize === 'medium-house') home = 3.5;
       if (quiz.homeSize === 'large-house') home = 5.2;
@@ -141,6 +127,9 @@ export default function OnboardingWizard({ onOnboardingComplete }: OnboardingWiz
       const personaName = quiz.commuteMode === 'walk-cycle' ? 'Active Eco-Explorer' :
                           quiz.diet === 'vegan' ? 'Green Plate Pioneer' : 'Mindful Consumer';
 
+      // Simulate a small network delay
+      await new Promise(resolve => setTimeout(resolve, 800));
+
       onOnboardingComplete({
           name: personaName,
           baselineScore: isNaN(total) ? 12.0 : total,
@@ -158,6 +147,8 @@ export default function OnboardingWizard({ onOnboardingComplete }: OnboardingWiz
             'Repurpose or repair one old clothing item instead of buying new'
           ],
       }, true);
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred during state optimization.');
     } finally {
       setLoading(false);
     }

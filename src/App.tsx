@@ -164,22 +164,15 @@ export default function App() {
     }
   }, [activeRowKey]);
 
-  // Pull budget status from server
+  // Pull budget status from server (Disabled for client-only bundle)
   const fetchBudgetStatus = async () => {
-    try {
-      const res = await fetch('/api/budget');
-      if (res.ok) {
-        const data = await res.json();
-        setApiBudget({
-          totalCostUsd: data.totalCostUsd || 0,
-          limitUsd: data.limitUsd || 1.00,
-          requestCount: data.requestCount || 0,
-          isLimitReached: !!data.isLimitReached
-        });
-      }
-    } catch (err) {
-      console.warn('Error reading budget details:', err);
-    }
+    // Return dummy budget since APIs are removed
+    setApiBudget({
+      totalCostUsd: 0,
+      limitUsd: 1.00,
+      requestCount: 0,
+      isLimitReached: false
+    });
   };
 
   useEffect(() => {
@@ -221,41 +214,15 @@ export default function App() {
     triggerAIInsightsUpdate(nextState);
   };
 
-  // Direct REST API Sync with error logging
+  // Direct computation without API sync
   const triggerAIInsightsUpdate = async (currentState: UserEcoState) => {
     if (!currentState.profile) return;
 
     setState(prev => ({ ...prev, aiInsightsLoading: true }));
     try {
-      const response = await fetch('/api/insights/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(currentState),
-      });
+      // Simulate slight delay before updating insights
+      await new Promise(resolve => setTimeout(resolve, 600));
 
-      if (!response.ok) {
-        throw new Error('AI Engine failed to compute current metrics.');
-      }
-
-      const data = await response.json();
-      
-      if (data.apiBudget) {
-        setApiBudget(data.apiBudget);
-      }
-
-      setState(prev => {
-        const next = { 
-          ...prev, 
-          aiInsights: data, 
-          aiInsightsLoading: false 
-        };
-        const { signature } = signState(next);
-        localStorage.setItem(activeRowKey, JSON.stringify({ ...next, signature }));
-        return next;
-      });
-    } catch (e) {
-      console.warn('[AI Insights Trigger Failure]: static fallback invoked', e);
-      // Static host fallback (e.g., Netlify)
       const data = {
         insights: [
           {
@@ -286,13 +253,16 @@ export default function App() {
       setState(prev => {
         const next = { 
           ...prev, 
-          aiInsights: data, 
+          aiInsights: data as any, 
           aiInsightsLoading: false 
         };
         const { signature } = signState(next);
         localStorage.setItem(activeRowKey, JSON.stringify({ ...next, signature }));
         return next;
       });
+    } catch (e) {
+      console.warn('Error applying static insights:', e);
+      setState(prev => ({ ...prev, aiInsightsLoading: false }));
     }
   };
 
