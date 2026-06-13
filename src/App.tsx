@@ -612,15 +612,21 @@ export default function App() {
                 <Shield className="w-6 h-6" />
               </div>
               <h1 className="text-lg font-bold tracking-tight text-gray-900">Secure Carbon Vault</h1>
+              <p className="text-xs text-gray-800 font-medium my-2 max-w-sm mx-auto leading-normal">
+                Understand, track, and reduce your carbon footprint through simple actions and personalized insights.
+              </p>
               <p className="text-xs text-gray-400 max-w-sm mx-auto leading-normal">
                 Sign in or create a private partitioned storage vault to secure your local carbon data.
               </p>
             </div>
 
             {/* Tabs selector */}
-            <div className="flex bg-gray-100/80 p-1 rounded-xl">
+            <div className="flex bg-gray-100/80 p-1 rounded-xl" role="tablist">
               <button
                 id="tab-signin-btn"
+                role="tab"
+                aria-selected={authTab === 'signin'}
+                aria-label="Sign In Tab"
                 onClick={() => { setAuthTab('signin'); setAuthMessage(null); }}
                 className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   authTab === 'signin' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-500 hover:text-gray-950'
@@ -630,6 +636,9 @@ export default function App() {
               </button>
               <button
                 id="tab-signup-btn"
+                role="tab"
+                aria-selected={authTab === 'signup'}
+                aria-label="Sign Up Tab"
                 onClick={() => { setAuthTab('signup'); setAuthMessage(null); }}
                 className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   authTab === 'signup' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-500 hover:text-gray-950'
@@ -639,6 +648,9 @@ export default function App() {
               </button>
               <button
                 id="tab-guest-btn"
+                role="tab"
+                aria-selected={authTab === 'guest'}
+                aria-label="Guest Box Tab"
                 onClick={() => { setAuthTab('guest'); setAuthMessage(null); }}
                 className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   authTab === 'guest' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-500 hover:text-gray-950'
@@ -673,7 +685,7 @@ export default function App() {
                 className="space-y-4"
               >
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block font-mono">Tenant ID / Username</label>
+                  <label htmlFor="auth-username-in" className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block font-mono">Tenant ID / Username</label>
                   <div className="relative">
                     <User className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                     <input
@@ -689,7 +701,7 @@ export default function App() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block font-mono">Access PIN Code</label>
+                  <label htmlFor="auth-pin-in" className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block font-mono">Access PIN Code</label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                     <input
@@ -723,7 +735,7 @@ export default function App() {
                 className="space-y-4"
               >
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase block font-mono">Choose Tenant ID</label>
+                  <label htmlFor="auth-username-up" className="text-[10px] font-bold text-gray-400 uppercase block font-mono">Choose Tenant ID</label>
                   <div className="relative">
                     <UserPlus className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                     <input
@@ -742,7 +754,7 @@ export default function App() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase block font-mono">Access PIN Password</label>
+                  <label htmlFor="auth-pin-up" className="text-[10px] font-bold text-gray-400 uppercase block font-mono">Access PIN Password</label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                     <input
@@ -758,7 +770,7 @@ export default function App() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase block font-mono">Confirm PIN</label>
+                  <label htmlFor="auth-pin-up-confirm" className="text-[10px] font-bold text-gray-400 uppercase block font-mono">Confirm PIN</label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                     <input
@@ -796,6 +808,7 @@ export default function App() {
 
                 <button
                   id="auth-submit-guest-btn"
+                  aria-label="Enter as Guest"
                   onClick={handleContinueAsGuest}
                   className="w-full py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer hover:shadow-sm transition-all text-center flex items-center justify-center gap-1.5"
                 >
@@ -809,6 +822,7 @@ export default function App() {
               <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider font-mono">Bypass Login</span>
               <button
                 id="quick-skip-to-guest-btn"
+                aria-label="Skip to Guest"
                 type="button"
                 onClick={handleContinueAsGuest}
                 className="w-full py-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 font-extrabold text-xs rounded-xl shadow-xs hover:shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 animate-pulse"
@@ -855,7 +869,7 @@ export default function App() {
               <span className="text-md font-black text-gray-900 tracking-tight leading-none flex items-center gap-1.5">
                 ECOTRACE <span className="text-[10px] font-mono uppercase bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-extrabold tracking-wide">SECURE</span>
               </span>
-              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none mt-1">Smart Carbon Reducer</p>
+              <p className="text-[9px] font-bold text-gray-400 max-w-[200px] sm:max-w-md uppercase tracking-wide leading-tight mt-1">Smart Carbon Reducer — Understand, track, and reduce your carbon footprint through simple actions and personalized insights</p>
             </div>
           </div>
 
@@ -893,6 +907,7 @@ export default function App() {
               {state.profile && (
                 <button
                   id="purge-profile-nav-btn"
+                  aria-label="Wipe Profile"
                   onClick={handleResetProfile}
                   title="Wipe & Reset Profile Data"
                   className="p-1 px-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer text-xs flex items-center"
@@ -903,6 +918,7 @@ export default function App() {
 
               <button
                 id="lock-partition-session-btn"
+                aria-label="Log Out"
                 onClick={handleLogout}
                 title="Lock & Exit Vault Partition"
                 className="p-1 px-2 text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer text-xs flex items-center"
@@ -994,6 +1010,7 @@ export default function App() {
 
                   <button
                     id="regenerate-ai-insights-btn"
+                    aria-label="Analyze with AI"
                     onClick={() => triggerAIInsightsUpdate(state)}
                     disabled={state.aiInsightsLoading}
                     className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 text-white font-bold text-xs px-3.5 py-2 rounded-full shadow transition-all cursor-pointer"
@@ -1100,6 +1117,7 @@ export default function App() {
                     <input
                       id="custom-action-input"
                       type="text"
+                      aria-label="Add custom impact habit"
                       placeholder="Add custom impact habit... (e.g. cold laundry wash)"
                       value={customActionText}
                       onChange={(e) => setCustomActionText(e.target.value)}
@@ -1107,6 +1125,7 @@ export default function App() {
                     />
                     <select
                       id="custom-action-category-select"
+                      aria-label="Select custom action category"
                       value={customActionCategory}
                       onChange={(e: any) => setCustomActionCategory(e.target.value)}
                       className="text-xs border border-gray-200 bg-gray-550/50 px-2 py-2 rounded-xl focus:outline-none"
@@ -1175,6 +1194,7 @@ export default function App() {
                     <input
                       id="commute-miles-range"
                       type="range"
+                      aria-label="Carbonavoid Commute Distance in miles"
                       min="1"
                       max="30"
                       value={manualMiles}

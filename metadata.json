@@ -1,6 +1,6 @@
 {
   "name": "EcoTrace",
-  "description": "EcoTrace is a full-stack, gamified carbon tracking application. It automates carbon monitoring via simulated utilities, banking, and fitness integrations, calculates personalized metrics locally, and champions habit-stacking for active sustainability.",
+  "description": "A solution that helps individuals understand, track, and reduce their carbon footprint through simple actions and personalized insights. EcoTrace is a full-stack, gamified carbon tracking application.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

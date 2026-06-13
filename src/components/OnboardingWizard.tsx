@@ -260,7 +260,7 @@ export default function OnboardingWizard({ onOnboardingComplete }: OnboardingWiz
 
                 <div className="bg-gray-550 p-5 rounded-2xl border border-gray-100 space-y-4">
                   <div className="flex justify-between items-center">
-                    <label className="text-sm font-semibold text-gray-700">Estimated weekly commute mileage:</label>
+                    <label htmlFor="weekly-mileage-slider" className="text-sm font-semibold text-gray-700">Estimated weekly commute mileage:</label>
                     <span className="text-lg font-mono font-bold text-emerald-700 bg-white px-3 py-1 rounded-xl shadow-sm border border-gray-100">{quiz.weeklyMileage} miles</span>
                   </div>
                   <input
