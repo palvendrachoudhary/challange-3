@@ -13,7 +13,7 @@ interface EmissionsChartsProps {
   currentActualScore: number;
 }
 
-export default function EmissionsCharts({ profile, currentActualScore }: EmissionsChartsProps) {
+export default React.memo(function EmissionsCharts({ profile, currentActualScore }: EmissionsChartsProps) {
   // Safe math bounds
   const baseline = profile.baselineScore;
   const target = profile.targetScore;
@@ -35,24 +35,24 @@ export default function EmissionsCharts({ profile, currentActualScore }: Emissio
   const statusColor = current <= target ? 'text-teal-600 bg-teal-50' : current <= baseline ? 'text-emerald-600 bg-emerald-50' : 'text-amber-600 bg-amber-50';
 
   // Category values
-  const categories = [
+  const categories = React.useMemo(() => [
     { label: 'Home Energy', key: 'home', value: profile.baselineBreakdown.home, color: 'bg-indigo-500 text-indigo-700', bg: 'bg-indigo-50' },
     { label: 'Travel & Flying', key: 'travel', value: profile.baselineBreakdown.travel, color: 'bg-purple-500 text-purple-700', bg: 'bg-purple-50' },
     { label: 'Food Intake', key: 'food', value: profile.baselineBreakdown.food, color: 'bg-emerald-500 text-emerald-700', bg: 'bg-emerald-50' },
     { label: 'Shopping Goods', key: 'shopping', value: profile.baselineBreakdown.shopping, color: 'bg-blue-500 text-blue-700', bg: 'bg-blue-50' },
-  ];
+  ], [profile.baselineBreakdown]);
 
   // Max for relative scaling
-  const maxCatVal = Math.max(...categories.map(c => c.value)) || 1;
+  const maxCatVal = React.useMemo(() => Math.max(...categories.map(c => c.value)) || 1, [categories]);
 
   // Mock weekly trend data leading up to current
-  const trendData = [
+  const trendData = React.useMemo(() => [
     { name: 'Week 1', score: baseline },
     { name: 'Week 2', score: baseline - (baseline - current) * 0.25 },
     { name: 'Week 3', score: baseline - (baseline - current) * 0.55 },
     { name: 'Week 4', score: baseline - (baseline - current) * 0.8 },
     { name: 'Current', score: current },
-  ];
+  ], [baseline, current]);
 
   return (
     <div id="emissions-graphs-section" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -232,4 +232,4 @@ export default function EmissionsCharts({ profile, currentActualScore }: Emissio
       </div>
     </div>
   );
-}
+});

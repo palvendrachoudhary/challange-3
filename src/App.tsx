@@ -13,6 +13,7 @@ import CommunityLeaderboard from './components/CommunityLeaderboard';
 import LocalMap from './components/LocalMap';
 import CommunityShop from './components/CommunityShop';
 import PremiumSuite from './components/PremiumSuite';
+import SmartAssistant from './components/SmartAssistant';
 import EcoTipsModal from './components/EcoTipsModal';
 import { 
   deriveTenantRowKey, 
@@ -1542,6 +1543,8 @@ export default function App() {
         onClose={() => setIsEcoTipsModalOpen(false)} 
         quiz={state.profile?.quiz} 
       />
+
+      <SmartAssistant ecoState={state} />
 
       <footer id="global-footer" className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-t border-white/40 dark:border-gray-700 py-10 mt-16 text-center text-xs text-gray-700 dark:text-gray-300 font-medium space-y-2 relative z-10 w-full mb-0">
         <p className="font-extrabold tracking-wide text-gray-900 dark:text-gray-100">ECOTRACE © 2026</p>
