@@ -593,7 +593,7 @@ export default function App() {
                 <span className="text-md font-black text-gray-950 tracking-tight leading-none flex items-center gap-1.5 uppercase">
                   ECOTRACE <span className="text-[9px] font-mono uppercase bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-extrabold tracking-wide">SECURE</span>
                 </span>
-                <p className="text-[9px] font-bold text-emerald-800 uppercase tracking-widest leading-none mt-1 font-extrabold">by THEKEDAAR.PROD</p>
+                <p className="text-[9px] font-bold text-emerald-800 uppercase tracking-widest leading-none mt-1 font-extrabold">by PAL</p>
               </div>
             </div>
             <div className="text-[10px] text-gray-450 font-mono tracking-wider flex items-center gap-1">
@@ -819,9 +819,9 @@ export default function App() {
 
         {/* Footer */}
         <footer className="py-8 text-center text-xs text-gray-400 border-t border-gray-150 bg-white">
-          <p className="font-extrabold tracking-wide text-gray-700">ECOTRACE • THEKEDAAR.PROD EDITION</p>
+          <p className="font-extrabold tracking-wide text-gray-700">ECOTRACE • PAL EDITION</p>
           <p className="text-[10px] text-gray-400 max-w-sm mx-auto mt-1 leading-normal px-2 font-mono">
-            Isolated Multi-Tenant Ledger framework designed & hosted by THEKEDAAR.PROD.
+            Isolated Multi-Tenant Ledger framework designed & hosted by PAL.
           </p>
         </footer>
       </div>
@@ -1209,7 +1209,7 @@ export default function App() {
       <footer id="global-footer" className="bg-white border-t border-gray-100 py-10 mt-16 text-center text-xs text-gray-400 space-y-2">
         <p className="font-extrabold tracking-wide text-gray-800">ECOTRACE © 2026</p>
         <p className="max-w-md mx-auto leading-normal">
-          Engineered and crafted by <span className="font-black text-emerald-800">THEKEDAAR.PROD</span>. All rights reserved.
+          Engineered and crafted by <span className="font-black text-emerald-800">PAL</span>. All rights reserved.
         </p>
       </footer>
     </div>

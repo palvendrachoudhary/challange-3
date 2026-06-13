@@ -1,7 +1,7 @@
 # EcoTrace: System Architecture & Data Flow Map
-### Developed & Engineered by THEKEDAAR.PROD
+### Developed & Engineered by PAL
 
-EcoTrace is a robust, full-stack, responsive carbon-neutral planner. It leverages client-side secure multi-client partitioning with a high-fidelity Express backend proxy, dynamic server-side Generative AI computations (via Google Gemini 3.5 Flash), continuous IoT utility sensors, and pre-integrated Firestore databases.
+EcoTrace is a robust, full-stack, responsive carbon-neutral planner. It leverages client-side secure multi-client partitioning with early static models and continuous simulated IoT utility sensors.
 
 ---
 
@@ -13,19 +13,12 @@ EcoTrace is a robust, full-stack, responsive carbon-neutral planner. It leverage
                   │             (React 19, Vite, Tailwind CSS)       │
                   └────────────────────────┬─────────────────────────┘
                                            │
-                                           │ HTTPS API Requests (port 3000)
+                                           │ Static Asset Serving (port 3000)
                                            ▼
                   ┌──────────────────────────────────────────────────┐
                   │                 EXPRESS BACKEND SERVER           │
                   │                      (server.ts)                 │
-                  └───────┬───────────────────────────────┬──────────┘
-                          │                               │
-                          │ Server-Side Secrets           │ Firebase SDK & Schema
-                          ▼ (ApiKey hidden)               ▼
-       ┌──────────────────────────────────────┐     ┌────────────────────────────┐
-       │     GOOGLE GEMINI INTERATIONS API    │     │       GOCOLE FIRESTORE     │
-       │           (gemini-3.5-flash)         │     │     (Enterprise DB GCP)    │
-       └──────────────────────────────────────┘     └────────────────────────────┘
+                  └──────────────────────────────────────────────────┘
 ```
 
 ---
@@ -57,20 +50,8 @@ The following lifecycle diagram shows how a guest bypasses credential gates, how
          │         │
          │         ├──► local state recalculation -> sends context payload to Node Server.
          │         ▼
-         ├───► [ Server-side Validation in server.ts ]
-         │         │
-         │         ├───► If `GEMINI_API_KEY` present:
-         │         │         └──► Passes state to Google GenAI.
-         │         │         └──► Formulates granular prediction curves + eco advices.
-         │         │
-         │         └───► If key missing (Fallback Mode):
-         │                   └──► Invokes high-precision carbon-math equation library.
-         │                   └──► Computes realistic coefficients instantly.
-         ▼
-[ Verified Dashboard Updates ]
-         │
          ├───► Rendered dynamically on Recharts graphs, live telemetry dial, & points indicators.
-         └───► Secure state saved continuously back to storage buffers.
+         └───► Secure state saved continuously back to local storage buffers.
 ```
 
 ---
@@ -90,8 +71,7 @@ Below is the file structural map of the engineered software:
 
 ### 2. Server-Side proxies (`/server.ts`)
 *   Binds to port `3000` on host `0.0.0.0` securely for Cloud Run reverse proxies.
-*   Acts as a secure wall shielding `GEMINI_API_KEY` entirely from client-side network inspectors.
-*   Dispatches secure analytical payloads to the `@google/genai` model `gemini-3.5-flash` with JSON output schemas to enforce typed API outputs.
+*   Serves static output for the frontend.
 
 ---
 
@@ -106,7 +86,7 @@ This application uses **Google Cloud Run** to build, scale-to-zero, and execute:
 
 ## 🐙 Push to GitHub Repository Instructions
 
-To copy and keep your remote GitHub repository synchronized with THEKEDAAR.PROD latest improvements:
+To copy and keep your remote GitHub repository synchronized with PAL latest improvements:
 
 1. Look at the **AI Studio Code Editor** top-right/settings panel.
 2. Under the **Export / Push Settings**, link your personal GitHub account.
