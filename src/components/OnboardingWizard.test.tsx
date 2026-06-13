@@ -16,7 +16,7 @@ describe('OnboardingWizard', () => {
     render(<OnboardingWizard onOnboardingComplete={vi.fn()} />);
     expect(screen.getByText('What best describes your typical daily diet?')).toBeDefined();
     
-    const veganBtn = screen.getByText('Plant-Based / Vegan');
+    const veganBtn = screen.getByText('Vegan / Strict Plant-Based');
     fireEvent.click(veganBtn);
     
     // Now verify vegan button is selected (it should have bg-emerald-50/40)

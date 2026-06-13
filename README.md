@@ -50,4 +50,54 @@ The interface was crafted strictly adhering to modern HCI (Human-Computer Intera
 - **Build Tooling**: Vite & Vitest.
 - **Styling**: Tailwind CSS (v4) with fully responsive layouts.
 - **Testing**: Highly covered by component unit tests using `@testing-library/react` and `vitest`. Tested for high structural coverage to ensure production stability.
-- **Security & Accessibility**: Built with contrast-safe palettes, semantic HTML arrays, and strict prop-typing to enforce safety.
+- **Security Protocols & Vulnerability Avoidance**: The application adheres strictly to secure-by-default architecture:
+  - **XSS Protection**: Relies fully on React's automatic DOM escaping. We avoid any use of `dangerouslySetInnerHTML`.
+  - **Integrity Chesuming**: Utilizes cryptographic checksum hashing (`src/utils/security.ts`) to prevent local storage tampering or side-channel leakage.
+  - **Content Security Policy (CSP)**: `index.html` implements strict `meta` tag CSP rules to limit execution to verified origins, aggressively mitigating malicious injections.
+  - **No Hardcoded Secrets**: Does not leak any third-party credentials to the client bundle. Extraneous local logic is decoupled safely.
+
+---
+
+## ☁️ Architecture & Flow Chart
+
+EcoTrace is designed with a modern, modular React-based architecture that emphasizes local state simulation, dynamic user interactions, and robust context awareness. Below is a high-level architectural diagram of how the components interact:
+
+```mermaid
+graph TD
+    UI[Client Application UI] --> State[Global EcoState Manager]
+    State --> Context[User Context & Preferences]
+    
+    UI --> Onboarding[Onboarding Wizard]
+    Onboarding -->|Set Baseline| Context
+    
+    UI --> Dashboard[Main Dashboard]
+    Dashboard --> Track[Habit Tracking Engine]
+    Dashboard --> Visuals[Recharts Visualizations]
+    
+    UI --> Assistant[Smart Assistant]
+    Assistant -->|Reads Context| State
+    Assistant -->|Provides Dynamic AI Tips| UI
+    
+    UI --> Integrations[Smart Integrations]
+    Integrations -->|Simulates Network Calls| State
+    
+    UI --> Premium[Premium IoT Suite]
+    Premium -->|Hardware Sync| State
+```
+
+### Component Logic & Flow
+
+1. **Client Application UI:** Built using standard React components with Tailwind CSS for rapid prototyping and responsive layouts, acting as the primary hub for the user interactions.
+2. **Global EcoState Manager:** A structured state container (using React hooks/context) holding the `UserEcoState` interface. This ensures all parts of the app have a unified source of truth for carbon scores, active challenges, and settings.
+3. **Smart Assistant:** A sophisticated helper agent that polls the `EcoState` dynamically. It bases its advice strictly on the parameters evaluated during onboarding and generated from interactions.
+4. **Data Integrations & Webhooks (Simulated):** A system mimicking secure API pulls from banking paths, wearables, and local smart-home infrastructures to dynamically shift the user's score in real-time.
+
+---
+
+## 🐙 How to Push to GitHub
+
+To push this project to your GitHub repository:
+1. Look at the **AI Studio Code Editor** top-right/settings panel.
+2. Under the **Export / Push Settings**, link your personal GitHub account.
+3. Click **GitHub Export** or **Sync**.
+4. AI Studio will automatically bundle the files and push them with a clean Git history directly to your assigned repository!

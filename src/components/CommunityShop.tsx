@@ -15,35 +15,35 @@ interface CommunityShopProps {
 const PARTNER_REWARDS = [
   {
     id: 'rew-1',
-    brand: 'AeroGreen Footwear',
-    item: '20% Off Recycled Knit Shoes',
+    brand: 'Myntra Earth',
+    item: '20% Off Sustainable Cotton',
     cost: 120,
-    desc: 'Made from 100% ocean-harvested post-consumer bottles.',
-    code: 'AEROGREEN20'
+    desc: 'Discount on eco-friendly, locally sourced organic cotton apparel.',
+    code: 'MYNTRAEARTH20'
   },
   {
     id: 'rew-2',
-    brand: 'CleanGrid Energy',
+    brand: 'Tata Power Solar',
     item: 'Offset 500kg of CO₂ Footprint',
     cost: 200,
-    desc: 'Sponsor wind farm turbines in low income grids.',
-    code: 'OFFWIND500'
+    desc: 'Sponsor solar mini-grids in rural Indian villages.',
+    code: 'TATASUN500'
   },
   {
     id: 'rew-3',
-    brand: 'EcoMug Sustainable Co',
-    item: 'Free Glass Reusable Bottle',
+    brand: 'Zomato/Swiggy',
+    item: '₹200 Green Delivery Voucher',
     cost: 150,
-    desc: 'Eliminates up to 300 single-use thermo plastic cups per year.',
-    code: 'MUGFREEOCEAN'
+    desc: 'Redeemable on orders delivered by EV fleet.',
+    code: 'EVFOOD200'
   },
   {
     id: 'rew-4',
-    brand: 'GreenPass Transit',
-    item: '$10 Train Commute Transit Pass',
+    brand: 'Namma/Delhi Metro',
+    item: '₹500 Transit Pass Top-up',
     cost: 250,
-    desc: 'Valid for public buses and metropolitan subways globally.',
-    code: 'SUBPASS10'
+    desc: 'Valid for public buses and metro commuting.',
+    code: 'METROPASS500'
   }
 ];
 

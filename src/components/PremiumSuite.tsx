@@ -31,24 +31,24 @@ interface PremiumSuiteProps {
 const PREMIUM_OFFSETS = [
   {
     id: 'off-1',
-    name: 'CleanAir High-Tech DAC',
-    type: 'Direct Air Capture (DAC) Suite',
+    name: 'Western Ghats Afforestation',
+    type: 'Biodiversity Buffer Block',
     offsetRateKgPerDay: 4.5,
-    desc: 'High-tech collectors vacuum carbon from ambient air, storing it underground in basalt stone permanently.',
+    desc: 'Support local tribal communities to plant and protect endemic tree species in the eco-sensitive zones.',
   },
   {
     id: 'off-2',
-    name: 'Coastal Mangrove Blue-Carbon',
+    name: 'Sundarbans Blue-Carbon',
     type: 'Wetland Bio-Restoration',
     offsetRateKgPerDay: 3.0,
-    desc: 'Marine mangrove roots store up to 5x more carbon per acre than dry pine soils while saving coastal biomes.',
+    desc: 'Marine mangrove roots store up to 5x more carbon. Protect the Bengal Tiger habitat from coastal erosion.',
   },
   {
     id: 'off-3',
-    name: 'Amazon Rainforest Protection',
-    type: 'Deforestation Buffer Block',
+    name: 'Rural Solar Microgrids',
+    type: 'Clean Energy Transition',
     offsetRateKgPerDay: 3.8,
-    desc: 'Legally shields dense old-growth acreage in Para, Brazil from predatory logging and livestock grazing.',
+    desc: 'Accelerates the transition from kerosene lamps to distributed solar energy in remote Indian villages.',
   }
 ];
 
@@ -308,7 +308,7 @@ export default function PremiumSuite({ ecoState, onUpdateState, onPostNotificati
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-500 dark:text-gray-400">Annual Prevented Household Cost:</span>
-                      <span className="font-bold text-emerald-700 font-mono">${(smartPlugs * 4.25).toFixed(2)} USD</span>
+                      <span className="font-bold text-emerald-700 font-mono">₹{(smartPlugs * 350).toFixed(0)} INR</span>
                     </div>
                   </div>
                 </div>

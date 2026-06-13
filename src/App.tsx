@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { LineChart, Line, YAxis } from 'recharts';
 import { UserEcoState, CarbonProfile, HabitTask, AIInsightsPayload } from './types';
 import OnboardingWizard from './components/OnboardingWizard';
@@ -41,16 +41,17 @@ import {
   Lock,
   User,
   UserPlus,
+  Users,
   Crown,
   Share2,
   Lightbulb
 } from 'lucide-react';
 
 const INITIAL_HABIT_TASKS: HabitTask[] = [
-  { id: 'h-1', text: 'Unplug entertainment systems tonight', points: 15, category: 'home', completed: false, co2SavedKg: 1.8, history: [0, 0, 100, 100, 0, 100, 0] },
-  { id: 'h-2', text: 'Walk or cycle for a trip under 1.5 miles', points: 20, category: 'travel', completed: false, co2SavedKg: 3.2, history: [100, 100, 100, 100, 100, 100, 0] },
-  { id: 'h-3', text: 'Choose package-free zero-waste produce', points: 10, category: 'shopping', completed: false, co2SavedKg: 0.9, history: [0, 100, 0, 100, 0, 100, 0] },
-  { id: 'h-4', text: 'Prepare a fiber-rich plant-based dinner', points: 15, category: 'food', completed: false, co2SavedKg: 2.4, history: [100, 0, 0, 100, 100, 100, 0] },
+  { id: 'h-1', text: 'Turn off AC and use ceiling fan instead', points: 15, category: 'home', completed: false, co2SavedKg: 1.8, history: [0, 0, 100, 100, 0, 100, 0] },
+  { id: 'h-2', text: 'Walk or take a sharing auto for a trip under 2 km', points: 20, category: 'travel', completed: false, co2SavedKg: 3.2, history: [100, 100, 100, 100, 100, 100, 0] },
+  { id: 'h-3', text: 'Take your own cloth bag for Sabzi Mandi (grocery) shopping', points: 10, category: 'shopping', completed: false, co2SavedKg: 0.9, history: [0, 100, 0, 100, 0, 100, 0] },
+  { id: 'h-4', text: 'Prepare a complete plant-based meal today', points: 15, category: 'food', completed: false, co2SavedKg: 2.4, history: [100, 0, 0, 100, 100, 100, 0] },
 ];
 
 const INITIAL_CHALLENGES = [
@@ -92,8 +93,26 @@ const INITIAL_CHALLENGES = [
   }
 ];
 
+const getFallbackProfile = (): CarbonProfile => ({
+  name: "EcoTrace User",
+  baselineScore: 4500,
+  targetScore: 3200,
+  baselineBreakdown: { home: 1800, travel: 1200, food: 1000, shopping: 500 },
+  personalizedWelcome: "Welcome to your Indian EcoTrace Dashboard! Try tracking some eco-friendly actions today to lower your carbon footprint.",
+  initialHabits: [],
+  quiz: {
+    diet: 'balanced',
+    commuteMode: 'public-transit',
+    weeklyMileage: 30,
+    flightsPerYear: 0,
+    homeEnergy: 'grid-electric',
+    homeSize: 'medium-house',
+    shoppingHabits: 'average'
+  }
+});
+
 const initializeNewTenantState = (): UserEcoState => ({
-  profile: null,
+  profile: getFallbackProfile(),
   habits: INITIAL_HABIT_TASKS,
   loggedActionsCount: 0,
   ecoPoints: 0,
@@ -118,6 +137,9 @@ export default function App() {
   const [activePin, setActivePin] = useState<string>(() => {
     return localStorage.getItem('ecotrace_active_pin_v1') || '0000';
   });
+  
+  const activeRowKey = deriveTenantRowKey(activeUser, activePin);
+
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     return localStorage.getItem('ecotrace_is_logged_in_v1') === 'true';
   });
@@ -144,7 +166,19 @@ export default function App() {
   
   const [rlsSecurityAlert, setRlsSecurityAlert] = useState<string | null>(null);
 
-  const [state, setState] = useState<UserEcoState>(initializeNewTenantState());
+  const [state, setState] = useState<UserEcoState>(() => {
+    const saved = localStorage.getItem(activeRowKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (!parsed.profile) parsed.profile = getFallbackProfile();
+        return parsed;
+      } catch (e) {
+        console.error('State parse error', e);
+      }
+    }
+    return initializeNewTenantState();
+  });
 
   const [apiBudget, setApiBudget] = useState({
     totalCostUsd: 0.0,
@@ -153,8 +187,6 @@ export default function App() {
     isLimitReached: false
   });
 
-  const activeRowKey = deriveTenantRowKey(activeUser, activePin);
-
   // Manual Quick Logger States
   const [manualFoodSelected, setManualFoodSelected] = useState('veg');
   const [manualMiles, setManualMiles] = useState(5);
@@ -162,6 +194,7 @@ export default function App() {
   const [customActionCategory, setCustomActionCategory] = useState<'home' | 'travel' | 'food' | 'shopping'>('home');
   const [habitFilter, setHabitFilter] = useState<'all' | 'home' | 'travel' | 'food' | 'shopping'>('all');
   const [hasCelebratedDailyGoal, setHasCelebratedDailyGoal] = useState(false);
+  const [activeDashboardTab, setActiveDashboardTab] = useState<'dashboard' | 'insights' | 'premium' | 'integrations' | 'community' | 'audit'>('dashboard');
 
   useEffect(() => {
     if (!state.profile) return;
@@ -245,6 +278,7 @@ export default function App() {
     };
 
     updateState(nextState);
+    setActiveDashboardTab('dashboard');
     triggerAIInsightsUpdate(nextState);
   };
 
@@ -258,13 +292,13 @@ export default function App() {
       await new Promise(resolve => setTimeout(resolve, 600));
 
       const ECO_FACTS = [
-        "Did you know? Switching to cold water for laundry can save up to 1,600 pounds of CO₂ per year.",
-        "Fun fact: Recycling one aluminum can saves enough energy to run a TV for three hours.",
-        "Did you know? A single tree can absorb up to 48 pounds of CO₂ per year.",
-        "Fun fact: Turning off the tap while brushing your teeth can save 8 gallons of water a day.",
-        "Did you know? LED light bulbs use up to 90% less energy and last up to 25 times longer than incandescent bulbs.",
-        "Fact: If every household replaced one roll of virgin fiber paper towels with 100% recycled ones, we could save 544,000 trees.",
-        "Did you know? Food waste generates about 8% of global greenhouse gas emissions.",
+        "Did you know? Switching to cold water for laundry can save up to 700 kg of CO₂ per year.",
+        "Fun fact: Solar rooftops in India can reduce electricity bills by 50% on average.",
+        "Did you know? India's local Metro rail systems offset more than 7 lakh tonnes of CO₂ equivalent per year.",
+        "Fun fact: Drying your clothes in the sun instead of using a dryer saves significant fossil fuel energy.",
+        "Did you know? LED tubelights use up to 90% less energy and last up to 25 times longer than typical incandescent bulbs.",
+        "Fact: Replacing heavily packaged deliveries with local Mandi shopping saves huge amounts of packaging waste.",
+        "Did you know? Avoiding single-use plastic bags for your groceries heavily reduces toxic landfill waste across Indian cities.",
       ];
       const randomFact = ECO_FACTS[Math.floor(Math.random() * ECO_FACTS.length)];
 
@@ -605,7 +639,7 @@ export default function App() {
     onQuickSuccessNotification('Successfully logged out of vault partition.');
   };
 
-  const calculateActualCurrentScore = () => {
+  const currentScore = useMemo(() => {
     if (!state.profile) return 0;
     
     let baseline = state.profile.baselineScore;
@@ -645,9 +679,16 @@ export default function App() {
     const totalReductionTons = Math.min(baseline - 1.0, (totalSavedKg * 12) / 1000 + integratedAdjustments + premiumOffsetTons + smartSavesTons);
 
     return Math.max(1.0, Math.round((baseline - totalReductionTons) * 10) / 10);
-  };
-
-  const currentScore = calculateActualCurrentScore();
+  }, [
+    state.profile,
+    state.habits,
+    state.challenges,
+    state.bankingConnected,
+    state.transactions,
+    state.isPremiumActive,
+    state.premiumOffsets,
+    state.totalSmartSavesKg
+  ]);
 
   // AUTHENTICATION VISUAL INTERFACE INTERCEPTOR
   if (!isLoggedIn) {
@@ -1039,28 +1080,93 @@ export default function App() {
           </div>
         )}
 
-        {!state.profile ? (
-          /* ONBOARDING FLOW PANEL */
-          <div id="un-onboarded-workspace" className="space-y-12 py-6">
-            <div className="max-w-2xl mx-auto text-center space-y-4">
-              <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 px-3 py-1 rounded-full text-xs font-semibold">
-                <Sparkles className="w-3.5 h-3.5" /> Behavior Science Carbon Tracking
-              </div>
-              <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight leading-tight">
-                Emissions tracking, scaled to zero effort.
-              </h2>
-              <p className="text-sm text-gray-500 max-w-lg mx-auto leading-relaxed">
-                EcoTrace connects safely to your utilities and ledger cards to automatically categorize emissions, recommending micro-rewards instead of climate guilt.
-              </p>
+        {/* always show dashboard since profile is initialized */}
+        <div id="onboarded-workspace" className="space-y-8 animate-fade-in">
+
+            {/* Main Navigation Tabs */}
+            <div role="tablist" aria-label="Dashboard views" className="flex bg-white/60 dark:bg-gray-800/60 p-1.5 rounded-2xl w-full mx-auto shadow-sm backdrop-blur-xl border border-gray-200 dark:border-gray-700/50 mb-8 overflow-x-auto hide-scrollbar sticky top-20 z-40">
+              <button
+                role="tab"
+                aria-selected={activeDashboardTab === 'dashboard'}
+                onClick={() => setActiveDashboardTab('dashboard')}
+                className={`flex-1 py-2.5 px-4 text-xs font-bold rounded-xl transition-all whitespace-nowrap flex items-center justify-center gap-2 ${
+                  activeDashboardTab === 'dashboard' ? 'bg-emerald-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-emerald-600 dark:hover:text-emerald-400'
+                }`}
+              >
+                <Activity className="w-4 h-4" /> Overview
+              </button>
+              <button
+                role="tab"
+                aria-selected={activeDashboardTab === 'insights'}
+                onClick={() => setActiveDashboardTab('insights')}
+                className={`flex-1 py-2.5 px-4 text-xs font-bold rounded-xl transition-all whitespace-nowrap flex items-center justify-center gap-2 ${
+                  activeDashboardTab === 'insights' ? 'bg-emerald-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-emerald-600 dark:hover:text-emerald-400'
+                }`}
+              >
+                <Sparkles className="w-4 h-4" /> AI Insights
+              </button>
+              <button
+                role="tab"
+                aria-selected={activeDashboardTab === 'premium'}
+                onClick={() => setActiveDashboardTab('premium')}
+                className={`flex-1 py-2.5 px-4 text-xs font-bold rounded-xl transition-all whitespace-nowrap flex items-center justify-center gap-2 ${
+                  activeDashboardTab === 'premium' ? 'bg-emerald-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-emerald-600 dark:hover:text-emerald-400'
+                }`}
+              >
+                <Crown className="w-4 h-4" /> Premium IoT
+              </button>
+              <button
+                role="tab"
+                aria-selected={activeDashboardTab === 'integrations'}
+                onClick={() => setActiveDashboardTab('integrations')}
+                className={`flex-1 py-2.5 px-4 text-xs font-bold rounded-xl transition-all whitespace-nowrap flex items-center justify-center gap-2 ${
+                  activeDashboardTab === 'integrations' ? 'bg-emerald-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-emerald-600 dark:hover:text-emerald-400'
+                }`}
+              >
+                <RefreshCw className="w-4 h-4" /> Webhooks
+              </button>
+              <button
+                role="tab"
+                aria-selected={activeDashboardTab === 'community'}
+                onClick={() => setActiveDashboardTab('community')}
+                className={`flex-1 py-2.5 px-4 text-xs font-bold rounded-xl transition-all whitespace-nowrap flex items-center justify-center gap-2 ${
+                  activeDashboardTab === 'community' ? 'bg-emerald-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-emerald-600 dark:hover:text-emerald-400'
+                }`}
+              >
+                <Users className="w-4 h-4" /> Community
+              </button>
+              <button
+                role="tab"
+                aria-selected={activeDashboardTab === 'audit'}
+                onClick={() => setActiveDashboardTab('audit')}
+                className={`flex-1 py-2.5 px-4 text-xs font-bold rounded-xl transition-all whitespace-nowrap flex items-center justify-center gap-2 ${
+                  activeDashboardTab === 'audit' ? 'bg-emerald-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-emerald-600 dark:hover:text-emerald-400'
+                }`}
+              >
+                <Lightbulb className="w-4 h-4" /> Setup Profile
+              </button>
             </div>
 
-            <OnboardingWizard onOnboardingComplete={handleOnboardingComplete} />
-          </div>
-        ) : (
-          /* CORE DASHBOARD WORKSPACE */
-          <div id="onboarded-workspace" className="space-y-8 animate-fade-in">
+            {activeDashboardTab === 'audit' && (
+              <div id="un-onboarded-workspace" className="space-y-12 py-6">
+                <div className="max-w-2xl mx-auto text-center space-y-4">
+                  <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 px-3 py-1 rounded-full text-xs font-semibold">
+                    <Sparkles className="w-3.5 h-3.5" /> Behavior Science Carbon Tracking
+                  </div>
+                  <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight leading-tight">
+                    Update your Carbon Baseline
+                  </h2>
+                  <p className="text-sm text-gray-500 max-w-lg mx-auto leading-relaxed">
+                    Take the 2-minute Eco Questionnaire to refine your goals and get personalized Indian climate-habit recommendations.
+                  </p>
+                </div>
+                <OnboardingWizard onOnboardingComplete={handleOnboardingComplete} />
+              </div>
+            )}
 
-            {/* Profile Intro Greeting Badge */}
+            {activeDashboardTab === 'dashboard' && (
+              <div className="space-y-8 animate-fade-in">
+                {/* Profile Intro Greeting Badge */}
             <div id="welcome-profile-card" className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border border-white/40 dark:border-gray-700 rounded-3xl shadow-lg flex flex-col overflow-hidden">
               <div className="p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="space-y-1">
@@ -1212,17 +1318,22 @@ export default function App() {
 
             {/* Main Charts & Wheels Component */}
             <EmissionsCharts profile={state.profile} currentActualScore={currentScore} />
+              </div>
+            )}
 
             {/* Premium Gold Carbon-Neutral Planner Suite */}
-            <PremiumSuite 
-              ecoState={state} 
-              onUpdateState={updateState} 
-              onPostNotification={onQuickSuccessNotification} 
-              triggerAIUpdate={triggerAIInsightsUpdate}
-            />
+            {activeDashboardTab === 'premium' && (
+              <PremiumSuite 
+                ecoState={state} 
+                onUpdateState={updateState} 
+                onPostNotification={onQuickSuccessNotification} 
+                triggerAIUpdate={triggerAIInsightsUpdate}
+              />
+            )}
 
             {/* AI Custom Insights panel */}
-            <div id="ai-insights-block" className="bg-gradient-to-br from-gray-900 to-slate-900 text-white rounded-3xl p-6 md:p-8 shadow-xl relative overflow-hidden">
+            {activeDashboardTab === 'insights' && (
+              <div id="ai-insights-block" className="bg-gradient-to-br from-gray-900 to-slate-900 text-white rounded-3xl p-6 md:p-8 shadow-xl relative overflow-hidden">
               <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-teal-500/10 rounded-full blur-3xl" />
               <div className="absolute -left-20 -top-20 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl" />
 
@@ -1318,8 +1429,10 @@ export default function App() {
                 )}
               </div>
             </div>
+            )}
 
             {/* Quick Actions & Habits Loggers column split */}
+            {activeDashboardTab === 'dashboard' && (
             <div id="habit-management-cols" className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Left Column: Habits checklist */}
               <div id="habits-checklist-box" className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border border-white/40 dark:border-gray-700 rounded-3xl p-6 shadow-lg space-y-5">
@@ -1516,26 +1629,32 @@ export default function App() {
                 </div>
               </div>
             </div>
+            )}
 
             {/* Smart Automated Integrations feeds connector row */}
+            {activeDashboardTab === 'integrations' && (
             <IntegrationsPanel 
               ecoState={state} 
               onUpdateState={updateState} 
               triggerAIUpdate={triggerAIInsightsUpdate} 
             />
+            )}
 
-            <CommunityLeaderboard />
-            
-            <LocalMap />
+            {activeDashboardTab === 'community' && (
+            <div className="space-y-8 animate-fade-in">
+              <CommunityLeaderboard />
+              
+              <LocalMap />
 
-            {/* Gamification Challenges & partner discounts shop component */}
-            <CommunityShop 
-              ecoState={state} 
-              onUpdateState={updateState} 
-            />
+              {/* Gamification Challenges & partner discounts shop component */}
+              <CommunityShop 
+                ecoState={state} 
+                onUpdateState={updateState} 
+              />
+            </div>
+            )}
 
           </div>
-        )}
       </main>
 
       <EcoTipsModal 

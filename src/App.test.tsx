@@ -27,6 +27,13 @@ describe('App', () => {
       vi.advanceTimersByTime(2000);
     });
 
+    // Bypassing login now goes straight to dashboard since we inject a fallback profile for guest
+    expect(screen.getByText(/Setup Profile/i)).toBeDefined();
+
+    // Open Onboarding Wizard via navigation tab
+    const setupProfileBtn = screen.getByText(/Setup Profile/i);
+    fireEvent.click(setupProfileBtn);
+    
     // The onboarding wizard should be visible now
     expect(screen.getByText(/What best describes your typical daily diet/i)).toBeDefined();
     

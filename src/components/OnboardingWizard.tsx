@@ -12,29 +12,29 @@ interface OnboardingWizardProps {
 }
 
 const DIET_OPTIONS = [
-  { value: 'vegan', label: 'Plant-Based / Vegan', desc: 'Zero meat, dairy, or animal product emissions.', icon: '🌱' },
-  { value: 'vegetarian', label: 'Vegetarian', desc: 'No meat, incorporates dairy and eggs.', icon: '🥚' },
-  { value: 'balanced', label: 'Balanced Consumer', desc: 'Occasional meat, poultry, and varied items.', icon: '🍲' },
-  { value: 'high-meat', label: 'High Meat Intake', desc: 'Frequent beef, pork, or poultry with meals.', icon: '🥩' },
+  { value: 'vegan', label: 'Vegan / Strict Plant-Based', desc: 'No animal products, highly sustainable.', icon: '🌱' },
+  { value: 'vegetarian', label: 'Traditional Indian Vegetarian', desc: 'No meat, incorporates dairy (paneer/ghee).', icon: '🍚' },
+  { value: 'balanced', label: 'Occasional Non-Veg (Eggetarian)', desc: 'Eggs or chicken occasionally.', icon: '🥚' },
+  { value: 'high-meat', label: 'Regular Non-Vegetarian', desc: 'Frequent chicken, mutton, or fish dishes.', icon: '🥘' },
 ];
 
 const COMMUTE_OPTIONS = [
-  { value: 'walk-cycle', label: 'Active Transit', desc: 'Walking, running, or cycling everywhere.', icon: '🚲' },
-  { value: 'electric-car', label: 'Electric Vehicle', desc: 'Zero tailpipe emissions, grid charging.', icon: '⚡' },
-  { value: 'public-transit', label: 'Public Transit', desc: 'Trains, subways, metro systems, or buses.', icon: '🚌' },
-  { value: 'car', label: 'Combustion Engine Car', desc: 'Gasoline, diesel, or hybrid personal driving.', icon: '🚗' },
+  { value: 'walk-cycle', label: 'Walk / Cycle', desc: 'Active commute for short distances.', icon: '🚲' },
+  { value: 'electric-car', label: 'EV / E-Rickshaw', desc: 'Zero tailpipe emissions transit.', icon: '⚡' },
+  { value: 'public-transit', label: 'Metro / Local Train / Bus', desc: 'Heavy reliance on public transport.', icon: '🚌' },
+  { value: 'car', label: 'Petrol/Diesel Car or Bike', desc: 'Personal ICE vehicles, Scooters, APIs.', icon: '🚗' },
 ];
 
 const ENERGY_OPTIONS = [
-  { value: 'electric-solar', label: 'Solar & Renewable', desc: 'Rooftop solar panels, clean storage.', icon: '☀️' },
-  { value: 'grid-electric', label: 'Grid Electricity', desc: 'Standard power from mixed regional grid.', icon: '💡' },
-  { value: 'heating-gas', label: 'Natural Gas / Oil heating', desc: 'Fossil fuel combustion warming systems.', icon: '🔥' },
+  { value: 'electric-solar', label: 'Solar Rooftop', desc: 'Renewable power generation at home.', icon: '☀️' },
+  { value: 'grid-electric', label: 'Grid Electricity', desc: 'Standard discom power supply (Coal mix).', icon: '💡' },
+  { value: 'heating-gas', label: 'LPG / Heavy AC Usage', desc: 'LPG cylinders directly or 24x7 AC cooling.', icon: '❄️' },
 ];
 
 const SIZE_OPTIONS = [
-  { value: 'apartment', label: 'Apartment / Tiny House', desc: 'Shared structure insulation, small layout.', icon: '🏢' },
-  { value: 'medium-house', label: 'Medium Townhouse / House', desc: 'Modest heating & utility load footprint.', icon: '🏡' },
-  { value: 'large-house', label: 'Large Detached Estate', desc: 'High thermostat coverage and spacious energy demands.', icon: '🏰' },
+  { value: 'apartment', label: '1BHK / 2BHK Apartment', desc: 'Shared building structure, optimal energy.', icon: '🏢' },
+  { value: 'medium-house', label: 'Independent House', desc: 'Modest utility & water demands.', icon: '🏡' },
+  { value: 'large-house', label: 'Large Bungalow / Villa', desc: 'High thermostat or multi-AC coverage.', icon: '🏰' },
 ];
 
 const SHOPPING_OPTIONS = [
@@ -142,9 +142,9 @@ export default function OnboardingWizard({ onOnboardingComplete }: OnboardingWiz
           targetScore: Math.round((total * 0.75) * 10) / 10,
           personalizedWelcome: `Welcome to EcoTrace! Based on your onboarding details, your primary impact area is **${home > travel ? 'Home Energy' : 'Travel & Commutes'}**. Fortunately, basic habits like solar/electric swaps can lower this significantly!`,
         initialHabits: [
-          quiz.commuteMode === 'car' ? 'Walk or bike for short trips under 1.5 miles' : 'Turn down home thermostat by 1°C',
-          quiz.diet === 'high-meat' ? 'Introduce Meatless Mondays into your weekly meal planning' : 'Unplug your home electronics and game consoles before bed',
-          'Repurpose or repair one old clothing item instead of buying new'
+          quiz.commuteMode === 'car' ? 'Walk or take a sharing auto for short trips under 2 km' : 'Set home AC thermostat to 24°C instead of 18°C',
+          quiz.diet === 'high-meat' ? 'Introduce two complete vegetarian days into your weekly meals' : 'Turn off unused fans and tubelights when leaving a room',
+          'Use UPI payments instead of asking for paper receipts'
         ],
         quiz: quiz,
       }, true);
@@ -261,8 +261,8 @@ export default function OnboardingWizard({ onOnboardingComplete }: OnboardingWiz
 
                 <div className="bg-gray-550 p-5 rounded-2xl border border-gray-100 space-y-4">
                   <div className="flex justify-between items-center">
-                    <label htmlFor="weekly-mileage-slider" className="text-sm font-semibold text-gray-700">Estimated weekly commute mileage:</label>
-                    <span className="text-lg font-mono font-bold text-emerald-700 bg-white px-3 py-1 rounded-xl shadow-sm border border-gray-100">{quiz.weeklyMileage} miles</span>
+                    <label htmlFor="weekly-mileage-slider" className="text-sm font-semibold text-gray-700">Estimated weekly commute distance (km):</label>
+                    <span className="text-lg font-mono font-bold text-emerald-700 bg-white px-3 py-1 rounded-xl shadow-sm border border-gray-100">{quiz.weeklyMileage} km</span>
                   </div>
                   <input aria-label="Data Input"
                     id="weekly-mileage-slider"
@@ -274,9 +274,9 @@ export default function OnboardingWizard({ onOnboardingComplete }: OnboardingWiz
                     className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
                   />
                   <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400 font-mono">
-                    <span>1 mile (Low)</span>
-                    <span>75 miles (Average)</span>
-                    <span>150+ miles (High)</span>
+                    <span>1 km (Low)</span>
+                    <span>75 km (Average)</span>
+                    <span>150+ km (High)</span>
                   </div>
                 </div>
               </div>

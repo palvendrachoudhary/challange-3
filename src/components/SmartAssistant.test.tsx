@@ -6,6 +6,9 @@ import { UserEcoState } from '../types';
 
 const mockState: UserEcoState = {
   profile: {
+    name: "Mock User",
+    personalizedWelcome: "Welcome",
+    initialHabits: [],
     baselineScore: 5000,
     targetScore: 3000,
     quiz: {

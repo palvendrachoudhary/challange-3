@@ -59,7 +59,7 @@ describe('CommunityShop', () => {
     render(<CommunityShop ecoState={mockState} onUpdateState={vi.fn()} />);
     const rewardsTabBtn = screen.getByText('Partner Discounts');
     fireEvent.click(rewardsTabBtn);
-    expect(screen.getByText(/AeroGreen Footwear/i)).toBeDefined();
+    expect(screen.getByText(/Myntra Earth/i)).toBeDefined();
   });
 
   it('joins a challenge', () => {
