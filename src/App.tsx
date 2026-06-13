@@ -599,7 +599,7 @@ export default function App() {
               </div>
             </div>
             <div className="text-[10px] text-gray-450 font-mono tracking-wider flex items-center gap-1">
-              <Shield className="w-3.5 h-3.5 text-emerald-650" /> SECURED END-TO-END CRYPTO PORTAL
+              <Shield className="w-3.5 h-3.5 text-emerald-650" /> SECURED END-TO-END ENCRYPTED PORTAL
             </div>
           </div>
         </header>
