@@ -60,10 +60,10 @@ export default function OnboardingWizard({ onOnboardingComplete }: OnboardingWiz
 
   const [loadingMessageIdx, setLoadingMessageIdx] = useState(0);
   const loadingMessages = [
-    'Calling Google Gemini API to analyze environmental variables...',
+    'Calculating eco baseline variables locally...',
     'Tuning state multipliers against climate research database...',
     'Drafting custom habit loops using behavior sciences...',
-    'Securing sandbox utility integration keys...',
+    'Securing sandbox utility integration protocols...',
   ];
 
   React.useEffect(() => {
