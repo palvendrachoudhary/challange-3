@@ -819,7 +819,7 @@ export default function App() {
 
         {/* Footer */}
         <footer className="py-8 text-center text-xs text-gray-400 border-t border-gray-150 bg-white">
-          <p className="font-extrabold tracking-wide text-gray-700">ECOTRACE • PAL EDITION</p>
+          <p className="font-extrabold tracking-wide text-gray-700">ECOTRACE • PAL</p>
           <p className="text-[10px] text-gray-400 max-w-sm mx-auto mt-1 leading-normal px-2 font-mono">
             Isolated Multi-Tenant Ledger framework designed & hosted by PAL.
           </p>
