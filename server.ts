@@ -154,70 +154,75 @@ function getGenAIClient(): GoogleGenAI | null {
 
 // 1. Math-based fallback calculator (reproduced industry baselines like EPA & DEFRA)
 function calculateLocalBaseline(quiz: any) {
-  let home = 2.0; // Apartment default
-  if (quiz.homeSize === 'medium-house') home = 3.5;
-  if (quiz.homeSize === 'large-house') home = 5.2;
+  const q = {
+    homeSize: quiz?.homeSize || 'medium-house',
+    homeEnergy: quiz?.homeEnergy || 'grid-electric',
+    commuteMode: quiz?.commuteMode || 'car',
+    weeklyMileage: typeof quiz?.weeklyMileage === 'number' ? quiz.weeklyMileage : (Number(quiz?.weeklyMileage) || 35),
+    flightsPerYear: typeof quiz?.flightsPerYear === 'number' ? quiz.flightsPerYear : (Number(quiz?.flightsPerYear) || 1),
+    diet: quiz?.diet || 'balanced',
+    shoppingHabits: quiz?.shoppingHabits || 'average'
+  };
 
-  if (quiz.homeEnergy === 'electric-solar') home *= 0.15; // Solar offset
-  if (quiz.homeEnergy === 'grid-electric') home *= 0.8;
+  let home = 2.0; // Apartment default
+  if (q.homeSize === 'medium-house') home = 3.5;
+  if (q.homeSize === 'large-house') home = 5.2;
+
+  if (q.homeEnergy === 'electric-solar') home *= 0.15; // Solar offset
+  if (q.homeEnergy === 'grid-electric') home *= 0.8;
 
   let travel = 0.5; // low travel
-  if (quiz.commuteMode === 'car') {
-    travel += (quiz.weeklyMileage * 52 * 0.404) / 1000; // 0.404 kg per mile
-  } else if (quiz.commuteMode === 'electric-car') {
-    travel += (quiz.weeklyMileage * 52 * 0.12) / 1000;
-  } else if (quiz.commuteMode === 'public-transit') {
-    travel += (quiz.weeklyMileage * 52 * 0.14) / 1000;
+  if (q.commuteMode === 'car') {
+    travel += (q.weeklyMileage * 52 * 0.404) / 1000; // 0.404 kg per mile
+  } else if (q.commuteMode === 'electric-car') {
+    travel += (q.weeklyMileage * 52 * 0.12) / 1000;
+  } else if (q.commuteMode === 'public-transit') {
+    travel += (q.weeklyMileage * 52 * 0.14) / 1000;
   } else {
     travel += 0.05; // walk/cycle minor emissions
   }
 
   // flights: approx 0.8 Tons per average domestic/medium flight
-  travel += quiz.flightsPerYear * 0.8;
+  travel += q.flightsPerYear * 0.8;
 
   let food = 1.5; // balanced
-  if (quiz.diet === 'vegan') food = 0.5;
-  if (quiz.diet === 'vegetarian') food = 0.9;
-  if (quiz.diet === 'high-meat') food = 2.8;
+  if (q.diet === 'vegan') food = 0.5;
+  if (q.diet === 'vegetarian') food = 0.9;
+  if (q.diet === 'high-meat') food = 2.8;
 
   let shopping = 1.0;
-  if (quiz.shoppingHabits === 'minimalist') shopping = 0.3;
-  if (quiz.shoppingHabits === 'frequent-buyer') shopping = 2.4;
+  if (q.shoppingHabits === 'minimalist') shopping = 0.3;
+  if (q.shoppingHabits === 'frequent-buyer') shopping = 2.4;
 
   const total = Math.round((home + travel + food + shopping) * 10) / 10;
 
   return {
-    baselineScore: total,
+    baselineScore: isNaN(total) ? 12.0 : total,
     baselineBreakdown: {
-      home: Math.round(home * 10) / 10,
-      travel: Math.round(travel * 10) / 10,
-      food: Math.round(food * 10) / 10,
-      shopping: Math.round(shopping * 10) / 10,
+      home: isNaN(home) ? 3.5 : Math.round(home * 10) / 10,
+      travel: isNaN(travel) ? 4.2 : Math.round(travel * 10) / 10,
+      food: isNaN(food) ? 1.5 : Math.round(food * 10) / 10,
+      shopping: isNaN(shopping) ? 1.8 : Math.round(shopping * 10) / 10,
     },
   };
 }
 
 // REST route: POST /api/onboarding/profile
 app.post('/api/onboarding/profile', rateLimitMiddleware, async (req, res) => {
+  let quiz = req.body || {};
   try {
-    const quiz = req.body;
-    if (!quiz) {
-      return res.status(400).json({ error: 'Quiz payload is required' });
-    }
-
     // Sanitize user inputs to shield against command injections
-    quiz.diet = sanitizeInput(quiz.diet);
-    quiz.commuteMode = sanitizeInput(quiz.commuteMode);
-    quiz.homeEnergy = sanitizeInput(quiz.homeEnergy);
-    quiz.homeSize = sanitizeInput(quiz.homeSize);
-    quiz.shoppingHabits = sanitizeInput(quiz.shoppingHabits);
+    quiz.diet = sanitizeInput(quiz.diet) || 'balanced';
+    quiz.commuteMode = sanitizeInput(quiz.commuteMode) || 'car';
+    quiz.homeEnergy = sanitizeInput(quiz.homeEnergy) || 'grid-electric';
+    quiz.homeSize = sanitizeInput(quiz.homeSize) || 'medium-house';
+    quiz.shoppingHabits = sanitizeInput(quiz.shoppingHabits) || 'average';
 
     const localStats = calculateLocalBaseline(quiz);
     const ai = getGenAIClient();
     const budgetReached = budgetState.totalCostUsd >= BUDGET_LIMIT_USD;
 
     if (!ai || budgetReached) {
-      // Return creative simulated onboarding response
       const personaName = quiz.commuteMode === 'walk-cycle' ? 'Active Eco-Explorer' :
                           quiz.diet === 'vegan' ? 'Green Plate Pioneer' : 'Mindful Consumer';
 
@@ -241,7 +246,6 @@ app.post('/api/onboarding/profile', rateLimitMiddleware, async (req, res) => {
 
     // Try to call Gemini, with immediate fallback on any API error or 503 overload
     try {
-      // Call Gemini for custom creative insights & persona categorization
       const prompt = `Based on this carbon onboarding profile, calculate a personalized person scope:
         Diet: ${quiz.diet}
         Commute: ${quiz.commuteMode} (${quiz.weeklyMileage} miles/week)
@@ -261,7 +265,7 @@ app.post('/api/onboarding/profile', rateLimitMiddleware, async (req, res) => {
         Requirements: Return JSON format strictly.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-flash-latest',
+        model: 'gemini-3.5-flash',
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
@@ -301,21 +305,31 @@ app.post('/api/onboarding/profile', rateLimitMiddleware, async (req, res) => {
       }
 
       const parsed = JSON.parse(response.text || '{}');
-      // Ensure numeric alignments
-      const total = Math.round(parsed.baselineScore * 10) / 10;
-      const home = Math.round(parsed.baselineBreakdown.home * 10) / 10;
-      const travel = Math.round(parsed.baselineBreakdown.travel * 10) / 10;
-      const food = Math.round(parsed.baselineBreakdown.food * 10) / 10;
-      const shopping = Math.round(parsed.baselineBreakdown.shopping * 10) / 10;
+      
+      // Ensure numeric alignments with safe nullish values falling back to localStats
+      const parsedScore = typeof parsed?.baselineScore === 'number' && !isNaN(parsed.baselineScore) ? parsed.baselineScore : localStats.baselineScore;
+      const total = Math.round(parsedScore * 10) / 10;
+      
+      const parsedHome = typeof parsed?.baselineBreakdown?.home === 'number' && !isNaN(parsed.baselineBreakdown.home) ? parsed.baselineBreakdown.home : localStats.baselineBreakdown.home;
+      const home = Math.round(parsedHome * 10) / 10;
+      
+      const parsedTravel = typeof parsed?.baselineBreakdown?.travel === 'number' && !isNaN(parsed.baselineBreakdown.travel) ? parsed.baselineBreakdown.travel : localStats.baselineBreakdown.travel;
+      const travel = Math.round(parsedTravel * 10) / 10;
+      
+      const parsedFood = typeof parsed?.baselineBreakdown?.food === 'number' && !isNaN(parsed.baselineBreakdown.food) ? parsed.baselineBreakdown.food : localStats.baselineBreakdown.food;
+      const food = Math.round(parsedFood * 10) / 10;
+      
+      const parsedShopping = typeof parsed?.baselineBreakdown?.shopping === 'number' && !isNaN(parsed.baselineBreakdown.shopping) ? parsed.baselineBreakdown.shopping : localStats.baselineBreakdown.shopping;
+      const shopping = Math.round(parsedShopping * 10) / 10;
 
       res.json({
         profile: {
           name: parsed.name || 'Eco Advocate',
-          baselineScore: total || localStats.baselineScore,
+          baselineScore: total,
           baselineBreakdown: { home, travel, food, shopping },
           targetScore: Math.round((total * 0.75) * 10) / 10,
-          personalizedWelcome: parsed.personalizedWelcome,
-          initialHabits: parsed.initialHabits && parsed.initialHabits.length ? parsed.initialHabits : [
+          personalizedWelcome: parsed.personalizedWelcome || `Welcome to EcoTrace! Based on your onboarding profile, your primary impact area comes from **${home > travel ? 'Home Energy' : 'Travel & Commutes'}**. Fortunately, simple micro-habits can lower this significantly!`,
+          initialHabits: parsed.initialHabits && parsed.initialHabits.length ? parsed.initialHabits.slice(0, 3) : [
             quiz.commuteMode === 'car' ? 'Walk or bike for short trips under 1.5 miles' : 'Turn down home thermostat by 1°C',
             quiz.diet === 'high-meat' ? 'Introduce Meatless Mondays into your meal planning' : 'Unplug home electronics and consoles before bed',
             'Repurpose or repair one old clothing item instead of buying new'
@@ -338,7 +352,7 @@ app.post('/api/onboarding/profile', rateLimitMiddleware, async (req, res) => {
           personalizedWelcome: `Welcome to EcoTrace! Based on your onboarding details, your primary impact area is **${localStats.baselineBreakdown.home > localStats.baselineBreakdown.travel ? 'Home Energy' : 'Travel & Commutes'}**. Fortunately, basic habits like solar/electric swaps can lower this significantly!`,
           initialHabits: [
             quiz.commuteMode === 'car' ? 'Walk or bike for short trips under 1.5 miles' : 'Turn down home thermostat by 1°C',
-            quiz.diet === 'high-meat' ? 'Introduce Meatless Mondays into your meal planning' : 'Unplug home electronics and consoles before bed',
+            quiz.diet === 'high-meat' ? 'Introduce Meatless Mondays into your weekly meal planning' : 'Unplug your home electronics and game consoles before bed',
             'Repurpose or repair one old clothing item instead of buying new'
           ],
         },
@@ -347,8 +361,26 @@ app.post('/api/onboarding/profile', rateLimitMiddleware, async (req, res) => {
       });
     }
   } catch (error: any) {
-    safeErrorLog('[EcoTrace AI Baseline Error]', error);
-    res.status(500).json({ error: 'Server computation error: ' + error.message });
+    safeErrorLog('[EcoTrace AI Baseline Error] Resiliency bypass activated', error);
+    const localStats = calculateLocalBaseline(quiz);
+    const personaName = quiz?.commuteMode === 'walk-cycle' ? 'Active Eco-Explorer' :
+                        quiz?.diet === 'vegan' ? 'Green Plate Pioneer' : 'Mindful Consumer';
+    res.json({
+      profile: {
+        name: personaName,
+        baselineScore: localStats.baselineScore,
+        baselineBreakdown: localStats.baselineBreakdown,
+        targetScore: Math.round((localStats.baselineScore * 0.75) * 10) / 10,
+        personalizedWelcome: `Welcome to EcoTrace! Based on your onboarding details, your primary impact is **Home Utilities & Travel**. Fortunately, basic habits like solar swaps can lower this! (Continuous Resiliency Active).`,
+        initialHabits: [
+          'Walk or bike for short trips under 1.5 miles',
+          'Introduce Meatless Mondays into your meal planning',
+          'Repurpose or repair one old clothing item instead of buying new'
+        ],
+      },
+      isFallbackActive: true,
+      apiBudget: getBudgetResponse()
+    });
   }
 });// REST route: POST /api/insights/generate
 app.post('/api/insights/generate', rateLimitMiddleware, async (req, res) => {
