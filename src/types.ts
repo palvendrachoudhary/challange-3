@@ -25,6 +25,7 @@ export interface CarbonProfile {
   targetScore: number; // usually baseline - 20-30%
   personalizedWelcome: string;
   initialHabits: string[];
+  quiz?: OnboardingQuiz;
 }
 
 export interface HabitTask {
@@ -34,6 +35,7 @@ export interface HabitTask {
   category: 'home' | 'travel' | 'food' | 'shopping';
   completed: boolean;
   co2SavedKg: number; // CO2 reduced in kg
+  history?: number[]; // [0, 100, 100, 0, 100, 100, 100] etc
 }
 
 export interface MockTransaction {
@@ -114,9 +116,11 @@ export interface UserEcoState {
   // AI Insights caching
   aiInsights: AIInsightsPayload | null;
   aiInsightsLoading: boolean;
+  currentEcoFact?: string;
   // Premium membership & smart automation suite integration
   isPremiumActive?: boolean;
   premiumOffsets?: string[];
   smartPlugsCount?: number;
   totalSmartSavesKg?: number;
+  dailyCarbonGoalKg?: number;
 }

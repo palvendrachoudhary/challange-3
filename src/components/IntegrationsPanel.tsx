@@ -205,7 +205,7 @@ export default function IntegrationsPanel({ ecoState, onUpdateState, triggerAIUp
             </div>
             <div>
               <h3 className="text-md font-bold text-gray-900 leading-none">Smart Integrations</h3>
-              <p className="text-xs text-gray-400 mt-0.5">Connect external feeds for zero-friction auto-tracking</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Connect external feeds for zero-friction auto-tracking</p>
             </div>
           </div>
           {(ecoState.utilityConnected || ecoState.bankingConnected || ecoState.fitnessConnected) && (
@@ -234,12 +234,12 @@ export default function IntegrationsPanel({ ecoState, onUpdateState, triggerAIUp
                     <CheckCircle2 className="w-3 h-3" /> CONNECTED
                   </span>
                 ) : (
-                  <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">OFFLINE</span>
+                  <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">OFFLINE</span>
                 )}
               </div>
               <div>
                 <h4 className="text-sm font-bold text-gray-800">Utility Provider API</h4>
-                <p className="text-xs text-gray-400 leading-normal mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 leading-normal mt-1">
                   Imports heating, electric and natural gas bill therm consumption values.
                 </p>
               </div>
@@ -277,12 +277,12 @@ export default function IntegrationsPanel({ ecoState, onUpdateState, triggerAIUp
                     <CheckCircle2 className="w-3 h-3" /> CONNECTED
                   </span>
                 ) : (
-                  <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">OFFLINE</span>
+                  <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">OFFLINE</span>
                 )}
               </div>
               <div>
                 <h4 className="text-sm font-bold text-gray-800">Secure Open Banking</h4>
-                <p className="text-xs text-gray-400 leading-normal mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 leading-normal mt-1">
                   Scouts and tags scope 3 carbon estimates across fuel vs clothing retail merchant transactions.
                 </p>
               </div>
@@ -320,12 +320,12 @@ export default function IntegrationsPanel({ ecoState, onUpdateState, triggerAIUp
                     <CheckCircle2 className="w-3 h-3" /> CONNECTED
                   </span>
                 ) : (
-                  <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">OFFLINE</span>
+                  <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">OFFLINE</span>
                 )}
               </div>
               <div>
                 <h4 className="text-sm font-bold text-gray-800">GPS Commute Logger</h4>
-                <p className="text-xs text-gray-400 leading-normal mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 leading-normal mt-1">
                   Integrates with Fitbit, Apple, or Strava to auto-calculate walking vs driving emissions.
                 </p>
               </div>
@@ -364,7 +364,7 @@ export default function IntegrationsPanel({ ecoState, onUpdateState, triggerAIUp
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-gray-550 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                    <tr className="border-b border-gray-550 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       <th className="pb-2">Merchant</th>
                       <th className="pb-2">Category</th>
                       <th className="pb-2">Amt</th>
@@ -405,7 +405,7 @@ export default function IntegrationsPanel({ ecoState, onUpdateState, triggerAIUp
                     <div key={log.id} className="flex justify-between items-center text-xs py-2 border-b border-gray-550">
                       <div>
                         <span className="capitalize font-semibold text-gray-800">{log.mode}</span>
-                        <span className="text-gray-400 font-mono ml-2">({log.distanceMiles} miles)</span>
+                        <span className="text-gray-500 dark:text-gray-400 font-mono ml-2">({log.distanceMiles} miles)</span>
                       </div>
                       <span className={`font-mono font-semibold ${log.carbonImpactKg === 0 ? 'text-emerald-600' : 'text-gray-600'}`}>
                         {log.carbonImpactKg === 0 ? '0.0 kg (Eco-Safe)' : `+${log.carbonImpactKg} kg CO₂`}
@@ -425,7 +425,7 @@ export default function IntegrationsPanel({ ecoState, onUpdateState, triggerAIUp
                   <div key={index} className="flex items-center justify-between p-3 bg-gray-50/50 rounded-xl border border-gray-100">
                     <div className="text-xs">
                       <div className="font-bold text-gray-800">{bill.billingPeriod} Statement</div>
-                      <div className="text-gray-400 font-mono mt-0.5">{bill.electricityKwh} kWh electric · {bill.gasTherms} therms gas</div>
+                      <div className="text-gray-500 dark:text-gray-400 font-mono mt-0.5">{bill.electricityKwh} kWh electric · {bill.gasTherms} therms gas</div>
                     </div>
                     <div className="text-right">
                       <div className="font-mono font-bold text-gray-705">+{bill.carbonImpactKg} kg CO₂</div>

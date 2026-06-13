@@ -113,7 +113,7 @@ export default function CommunityShop({ ecoState, onUpdateState }: CommunityShop
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-550 pb-5 gap-4 mb-6">
         <div>
           <h3 className="text-md font-bold text-gray-900 leading-none">Challenges & Rewards Shop</h3>
-          <p className="text-xs text-gray-400 mt-1">Practice behavior stacking with our sustainable partner brands</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Practice behavior stacking with our sustainable partner brands</p>
         </div>
 
         {/* Tab Controls */}
@@ -156,7 +156,7 @@ export default function CommunityShop({ ecoState, onUpdateState }: CommunityShop
                     <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full uppercase tracking-wider">
                       {ch.targetCategory} · +{ch.pointsReward} Points
                     </span>
-                    <span className="text-xs text-gray-400 font-mono flex items-center gap-1">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 font-mono flex items-center gap-1">
                       <Users className="w-3.5 h-3.5" /> {ch.participantsCount.toLocaleString()} active
                     </span>
                   </div>
@@ -170,7 +170,7 @@ export default function CommunityShop({ ecoState, onUpdateState }: CommunityShop
                 {ch.joined && (
                   <div className="space-y-1.5">
                     <div className="flex justify-between items-center text-[10px]">
-                      <span className="text-gray-400 font-semibold font-mono">My Quest Progress: {ch.progress}%</span>
+                      <span className="text-gray-500 dark:text-gray-400 font-semibold font-mono">My Quest Progress: {ch.progress}%</span>
                       <span className="text-emerald-700 font-semibold font-mono">Reward: -{ch.co2SavingsKg}kg CO₂</span>
                     </div>
                     <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
@@ -188,7 +188,7 @@ export default function CommunityShop({ ecoState, onUpdateState }: CommunityShop
                     onClick={() => handleJoinChallenge(ch.id)}
                     disabled={ch.progress === 100}
                     className={`w-full py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
-                      ch.progress === 100 ? 'bg-gray-100 text-gray-400 cursor-default' :
+                      ch.progress === 100 ? 'bg-gray-100 text-gray-500 dark:text-gray-400 cursor-default' :
                       ch.joined ? 'bg-emerald-50 border border-emerald-100 text-emerald-700 hover:bg-emerald-100/50' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
@@ -226,7 +226,7 @@ export default function CommunityShop({ ecoState, onUpdateState }: CommunityShop
                 >
                   <div className="space-y-3">
                     <div className="flex justify-between items-start">
-                      <div className="text-xs font-mono font-bold text-gray-400 uppercase">{rew.brand}</div>
+                      <div className="text-xs font-mono font-bold text-gray-500 dark:text-gray-400 uppercase">{rew.brand}</div>
                       <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full flex items-center gap-1 font-mono">
                         <Award className="w-3.5 h-3.5" /> {rew.cost} Pts
                       </span>
@@ -234,7 +234,7 @@ export default function CommunityShop({ ecoState, onUpdateState }: CommunityShop
 
                     <div>
                       <h4 className="text-sm font-bold text-gray-800 leading-tight">{rew.item}</h4>
-                      <p className="text-xs text-gray-400 mt-1 leading-normal">{rew.desc}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-normal">{rew.desc}</p>
                     </div>
                   </div>
 
@@ -250,7 +250,7 @@ export default function CommunityShop({ ecoState, onUpdateState }: CommunityShop
                         onClick={() => handleRedeemReward(rew.id, rew.cost, rew.code)}
                         disabled={tooExpensive}
                         className={`w-full py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          tooExpensive ? 'bg-gray-150 text-gray-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+                          tooExpensive ? 'bg-gray-150 text-gray-500 dark:text-gray-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
                         }`}
                       >
                         <Tag className="w-4 h-4" /> Redeem for {rew.cost} Points

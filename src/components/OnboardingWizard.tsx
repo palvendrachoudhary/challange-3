@@ -141,11 +141,12 @@ export default function OnboardingWizard({ onOnboardingComplete }: OnboardingWiz
           },
           targetScore: Math.round((total * 0.75) * 10) / 10,
           personalizedWelcome: `Welcome to EcoTrace! Based on your onboarding details, your primary impact area is **${home > travel ? 'Home Energy' : 'Travel & Commutes'}**. Fortunately, basic habits like solar/electric swaps can lower this significantly!`,
-          initialHabits: [
-            quiz.commuteMode === 'car' ? 'Walk or bike for short trips under 1.5 miles' : 'Turn down home thermostat by 1°C',
-            quiz.diet === 'high-meat' ? 'Introduce Meatless Mondays into your weekly meal planning' : 'Unplug your home electronics and game consoles before bed',
-            'Repurpose or repair one old clothing item instead of buying new'
-          ],
+        initialHabits: [
+          quiz.commuteMode === 'car' ? 'Walk or bike for short trips under 1.5 miles' : 'Turn down home thermostat by 1°C',
+          quiz.diet === 'high-meat' ? 'Introduce Meatless Mondays into your weekly meal planning' : 'Unplug your home electronics and game consoles before bed',
+          'Repurpose or repair one old clothing item instead of buying new'
+        ],
+        quiz: quiz,
       }, true);
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred during state optimization.');
@@ -166,7 +167,7 @@ export default function OnboardingWizard({ onOnboardingComplete }: OnboardingWiz
             <h1 className="text-xl font-bold text-gray-900 tracking-tight leading-none mt-0.5">2-Min Carbon Quiz</h1>
           </div>
         </div>
-        <div className="text-sm font-mono text-gray-400 bg-gray-50 px-3 py-1 rounded-full">
+        <div className="text-sm font-mono text-gray-500 dark:text-gray-400 bg-gray-50 px-3 py-1 rounded-full">
           Step {step} of 5
         </div>
       </div>
@@ -189,7 +190,7 @@ export default function OnboardingWizard({ onOnboardingComplete }: OnboardingWiz
       {loading ? (
         <div className="py-20 flex flex-col items-center justify-center text-center">
           <div className="relative mb-6">
-            <Loader2 className="w-12 h-12 text-emerald-500 animate-spin" />
+            <Loader2 className="w-12 h-12 text-emerald-700 dark:text-emerald-400 animate-spin" />
             <Sparkles className="w-6 h-6 text-yellow-500 absolute -top-2 -right-2 animate-bounce" />
           </div>
           <p className="text-lg font-medium text-gray-900 tracking-tight">Optimizing carbon footprint matrix...</p>
@@ -263,7 +264,7 @@ export default function OnboardingWizard({ onOnboardingComplete }: OnboardingWiz
                     <label htmlFor="weekly-mileage-slider" className="text-sm font-semibold text-gray-700">Estimated weekly commute mileage:</label>
                     <span className="text-lg font-mono font-bold text-emerald-700 bg-white px-3 py-1 rounded-xl shadow-sm border border-gray-100">{quiz.weeklyMileage} miles</span>
                   </div>
-                  <input
+                  <input aria-label="Data Input"
                     id="weekly-mileage-slider"
                     type="range"
                     min="1"
@@ -272,7 +273,7 @@ export default function OnboardingWizard({ onOnboardingComplete }: OnboardingWiz
                     onChange={(e) => setQuiz({ ...quiz, weeklyMileage: parseInt(e.target.value) })}
                     className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
                   />
-                  <div className="flex justify-between text-[10px] text-gray-400 font-mono">
+                  <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400 font-mono">
                     <span>1 mile (Low)</span>
                     <span>75 miles (Average)</span>
                     <span>150+ miles (High)</span>
@@ -302,7 +303,7 @@ export default function OnboardingWizard({ onOnboardingComplete }: OnboardingWiz
                       }`}
                     >
                       <span>{num === 6 ? '6+' : num}</span>
-                      <span className="text-[10px] font-medium uppercase tracking-wider text-gray-400 mt-1">Flights</span>
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mt-1">Flights</span>
                     </button>
                   ))}
                 </div>
@@ -325,7 +326,7 @@ export default function OnboardingWizard({ onOnboardingComplete }: OnboardingWiz
                 </div>
 
                 <div className="space-y-3">
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">Home Size & Housing Category</div>
+                  <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Home Size & Housing Category</div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {SIZE_OPTIONS.map((opt) => (
                       <button
@@ -346,7 +347,7 @@ export default function OnboardingWizard({ onOnboardingComplete }: OnboardingWiz
                 </div>
 
                 <div className="space-y-3 pt-2">
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">Primary Energy heating resource</div>
+                  <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Primary Energy heating resource</div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {ENERGY_OPTIONS.map((opt) => (
                       <button

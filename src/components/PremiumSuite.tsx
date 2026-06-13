@@ -56,25 +56,11 @@ export default function PremiumSuite({ ecoState, onUpdateState, onPostNotificati
   const [activeTab, setActiveTab] = useState<'offset' | 'iot' | 'advisory'>('offset');
   const [connectingPlug, setConnectingPlug] = useState(false);
 
-  const isPremium = !!ecoState.isPremiumActive;
   const activeOffsets = ecoState.premiumOffsets || [];
   const smartPlugs = ecoState.smartPlugsCount || 0;
   const totalSmartSaves = ecoState.totalSmartSavesKg || 0;
 
-  const handleActivatePremium = () => {
-    const updatedState = {
-      ...ecoState,
-      isPremiumActive: true
-    };
-    onUpdateState({
-      isPremiumActive: true
-    });
-    onPostNotification('✨ Activated EcoTrace Platinum Premium Suite for Free!');
-    triggerAIUpdate(updatedState);
-  };
-
   const handleToggleOffset = (id: string) => {
-    if (!isPremium) return;
 
     let updatedOffsets = [...activeOffsets];
 
@@ -97,7 +83,6 @@ export default function PremiumSuite({ ecoState, onUpdateState, onPostNotificati
   };
 
   const handleAddSmartPlug = () => {
-    if (!isPremium) return;
     setConnectingPlug(true);
 
     setTimeout(() => {
@@ -138,58 +123,20 @@ export default function PremiumSuite({ ecoState, onUpdateState, onPostNotificati
       <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center pb-6 border-b border-stone-200/60 gap-4 mb-6">
         <div className="space-y-1">
           <div className="inline-flex items-center gap-1.5 bg-amber-100 border border-amber-300 text-amber-800 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
-            <Crown className="w-3.5 h-3.5 fill-amber-600 stroke-amber-700" /> Platinum Suite
+            <Crown className="w-3.5 h-3.5 fill-amber-600 stroke-amber-700" /> Advanced Suite
           </div>
           <h2 className="text-lg font-black text-gray-900 tracking-tight flex items-center gap-2">
-            EcoTrace Platinum Carbon-Neutral Planner
+            EcoTrace Advanced Carbon-Neutral Planner
           </h2>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             Automate continuous offsets, configure idle appliance standby sensors, and design complex reduction paths.
           </p>
         </div>
-
-        {/* Upgrade Button or Premium Indicator Badge */}
-        {!isPremium ? (
-          <button
-            id="premium-upgrade-cta-btn"
-            onClick={handleActivatePremium}
-            className="w-full md:w-auto px-5 py-2.5 bg-gradient-to-r from-amber-600 via-amber-700 to-yellow-600 hover:shadow-md text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all border border-amber-500/30"
-          >
-            <Crown className="w-4 h-4 animate-bounce" /> Unlock Premium Suite (FREE)
-          </button>
-        ) : (
-          <div className="flex items-center gap-2 bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border border-amber-400/30 p-2 px-4 rounded-2xl">
-            <Star className="w-4 h-4 text-amber-600 fill-amber-500 animate-pulse" />
-            <span className="text-xs font-black text-amber-800 tracking-wider">PLATINUM LEVEL ENABLED</span>
-          </div>
-        )}
       </div>
 
-      {/* RENDER BODY WITH OVERLAY IF NOT PREMIUM */}
+      {/* RENDER BODY */}
       <div className="relative animate-fade-in">
         
-        {/* Lock Overlay */}
-        {!isPremium && (
-          <div className="absolute inset-0 z-30 bg-white/80 backdrop-blur-[2px] rounded-2xl flex flex-col items-center justify-center text-center p-6 space-y-4">
-            <div className="p-3.5 bg-amber-55/70 border border-amber-200 text-amber-750 rounded-full shadow-sm">
-              <Lock className="w-6 h-6 animate-pulse text-amber-600" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-gray-900 uppercase tracking-tight">Access Locked to Premium Tier</h4>
-              <p className="text-xs text-gray-500 max-w-sm mx-auto mt-1 leading-normal">
-                Activate high-impact automated direct air offset portfolios and IoT standby controllers instantly. Completely Free.
-              </p>
-            </div>
-            <button
-              id="premium-unlock-inner-btn"
-              onClick={handleActivatePremium}
-              className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow cursor-pointer transition-all flex items-center gap-1.5"
-            >
-              <Crown className="w-3.5 h-3.5" /> Activate Premium Suite (Free)
-            </button>
-          </div>
-        )}
-
         {/* Content Tabs selector */}
         <div className="flex border-b border-stone-200/40 pb-3 mb-6 gap-6 text-xs font-bold text-gray-500">
           <button
@@ -230,12 +177,12 @@ export default function PremiumSuite({ ecoState, onUpdateState, onPostNotificati
               <div>
                 <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block font-mono">My Offset Rate</span>
                 <span className="text-2xl font-black font-mono tracking-tight text-white">{totalDailyOffsetRate.toFixed(1)} kg</span>
-                <span className="text-xs text-gray-400 ml-1">CO₂ / day</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">CO₂ / day</span>
               </div>
               <div>
                 <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block font-mono">Monthly Avoidance Estimate</span>
                 <span className="text-2xl font-black font-mono tracking-tight text-emerald-400">{(totalDailyOffsetRate * 30).toFixed(0)} kg</span>
-                <span className="text-xs text-gray-400 ml-1">CO₂ saved</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">CO₂ saved</span>
               </div>
               <div className="flex items-center">
                 <span className="text-xs text-stone-300 leading-normal pl-4 border-l border-white/10">
@@ -266,7 +213,7 @@ export default function PremiumSuite({ ecoState, onUpdateState, onPostNotificati
                       </div>
                       <div>
                         <h4 className="text-sm font-black text-gray-900 leading-snug">{off.name}</h4>
-                        <span className="text-[9px] text-gray-400 uppercase block leading-none font-semibold font-mono">{off.type}</span>
+                        <span className="text-[9px] text-gray-500 dark:text-gray-400 uppercase block leading-none font-semibold font-mono">{off.type}</span>
                         <p className="text-xs text-gray-500 leading-relaxed mt-2">{off.desc}</p>
                       </div>
                     </div>
@@ -312,7 +259,7 @@ export default function PremiumSuite({ ecoState, onUpdateState, onPostNotificati
                 <h3 className="text-xs font-black text-gray-700 uppercase tracking-wider font-mono">My Smart Grid Adapters</h3>
                 
                 {smartPlugs === 0 ? (
-                  <div className="py-6 text-center text-xs text-gray-400 space-y-2">
+                  <div className="py-6 text-center text-xs text-gray-500 dark:text-gray-400 space-y-2">
                     <Activity className="w-8 h-8 text-stone-350 mx-auto" />
                     <p>No smart IoT adapters synchronized yet. Connect key home appliances to begin monitoring standby leakage.</p>
                   </div>
@@ -352,15 +299,15 @@ export default function PremiumSuite({ ecoState, onUpdateState, onPostNotificati
                   <h3 className="text-xs font-black text-gray-700 uppercase tracking-wider font-mono">Real-time Grid Analysis</h3>
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs">
-                      <span className="text-gray-400">Total Connected Devices:</span>
+                      <span className="text-gray-500 dark:text-gray-400">Total Connected Devices:</span>
                       <span className="font-bold text-gray-900">{smartPlugs}</span>
                     </div>
                     <div className="flex justify-between text-xs">
-                      <span className="text-gray-400">Continuous Wattage Preventive Shutoff:</span>
+                      <span className="text-gray-500 dark:text-gray-400">Continuous Wattage Preventive Shutoff:</span>
                       <span className="font-bold text-emerald-600 font-mono">{(smartPlugs * 1.5).toFixed(1)}W stand-by</span>
                     </div>
                     <div className="flex justify-between text-xs">
-                      <span className="text-gray-400">Annual Prevented Household Cost:</span>
+                      <span className="text-gray-500 dark:text-gray-400">Annual Prevented Household Cost:</span>
                       <span className="font-bold text-emerald-700 font-mono">${(smartPlugs * 4.25).toFixed(2)} USD</span>
                     </div>
                   </div>
@@ -382,10 +329,10 @@ export default function PremiumSuite({ ecoState, onUpdateState, onPostNotificati
           <div className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-5 border border-stone-200/60 rounded-2xl bg-white space-y-3">
-                <span className="text-[10px] font-bold text-amber-600 tracking-wider block font-mono uppercase">VIP Carbon Quota</span>
-                <h4 className="text-sm font-black text-gray-900 leading-tight">EcoTrace Platinum Elite Program</h4>
+                <span className="text-[10px] font-bold text-amber-600 tracking-wider block font-mono uppercase">Carbon Quota</span>
+                <h4 className="text-sm font-black text-gray-900 leading-tight">EcoTrace Advanced Program</h4>
                 <p className="text-xs text-gray-500 leading-relaxed">
-                  As a Platinum level participant, you gain early access to beta carbon-reduction partnerships and certified reforestation programs. Make sure to consult Gemini analytics below with your premium configurations.
+                  As an advanced participant, you gain early access to beta carbon-reduction partnerships and certified reforestation programs. Make sure to consult Gemini analytics below with your configurations.
                 </p>
                 <div className="pt-2 flex gap-3 text-xs font-bold">
                   <span className="text-emerald-700 bg-emerald-50 px-2 py-1 rounded">✓ Verified CO2 Seals</span>
