@@ -114,4 +114,9 @@ export interface UserEcoState {
   // AI Insights caching
   aiInsights: AIInsightsPayload | null;
   aiInsightsLoading: boolean;
+  // Premium membership & smart automation suite integration
+  isPremiumActive?: boolean;
+  premiumOffsets?: string[];
+  smartPlugsCount?: number;
+  totalSmartSavesKg?: number;
 }

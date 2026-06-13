@@ -9,6 +9,7 @@ import OnboardingWizard from './components/OnboardingWizard';
 import EmissionsCharts from './components/EmissionsCharts';
 import IntegrationsPanel from './components/IntegrationsPanel';
 import CommunityShop from './components/CommunityShop';
+import PremiumSuite from './components/PremiumSuite';
 import { 
   deriveTenantRowKey, 
   signState, 
@@ -34,7 +35,8 @@ import {
   Shield,
   Lock,
   User,
-  UserPlus
+  UserPlus,
+  Crown
 } from 'lucide-react';
 
 const INITIAL_HABIT_TASKS: HabitTask[] = [
@@ -537,8 +539,23 @@ export default function App() {
       integratedAdjustments += (netTxs * 4) / 1000; 
     }
 
+    // Premium offset subscriptions continuous saves (scale: kg daily * 365 days / 1000 for tons)
+    let premiumOffsetTons = 0;
+    if (state.isPremiumActive && state.premiumOffsets) {
+      const activeIds = state.premiumOffsets;
+      const rates: Record<string, number> = { 'off-1': 4.5, 'off-2': 3.0, 'off-3': 3.8 };
+      const sumDailyKg = activeIds.reduce((sum, id) => sum + (rates[id] || 0), 0);
+      premiumOffsetTons = (sumDailyKg * 365) / 1000;
+    }
+
+    // IoT Standby saves (scale monthly stand-by * 12)
+    let smartSavesTons = 0;
+    if (state.isPremiumActive && state.totalSmartSavesKg) {
+      smartSavesTons = (state.totalSmartSavesKg * 12) / 1000;
+    }
+
     const totalSavedKg = completedTaskCO2SavedKg + challengeCO2SavedKg;
-    const totalReductionTons = Math.min(baseline - 1.0, (totalSavedKg * 12) / 1000 + integratedAdjustments);
+    const totalReductionTons = Math.min(baseline - 1.0, (totalSavedKg * 12) / 1000 + integratedAdjustments + premiumOffsetTons + smartSavesTons);
 
     return Math.max(1.0, Math.round((baseline - totalReductionTons) * 10) / 10);
   };
@@ -569,7 +586,7 @@ export default function App() {
                 <span className="text-md font-black text-gray-950 tracking-tight leading-none flex items-center gap-1.5 uppercase">
                   ECOTRACE <span className="text-[9px] font-mono uppercase bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-extrabold tracking-wide">SECURE</span>
                 </span>
-                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none mt-1">Smart Carbon Reducer</p>
+                <p className="text-[9px] font-bold text-emerald-800 uppercase tracking-widest leading-none mt-1 font-extrabold">by THEKEDAAR.PROD</p>
               </div>
             </div>
             <div className="text-[10px] text-gray-450 font-mono tracking-wider flex items-center gap-1">
@@ -777,14 +794,27 @@ export default function App() {
                 </button>
               </div>
             )}
+
+            {/* Quick Guest Bypass / Skip Login Option */}
+            <div className="pt-4 border-t border-gray-100 flex flex-col items-center gap-2">
+              <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider font-mono">Bypass Login</span>
+              <button
+                id="quick-skip-to-guest-btn"
+                type="button"
+                onClick={handleContinueAsGuest}
+                className="w-full py-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 font-extrabold text-xs rounded-xl shadow-xs hover:shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 animate-pulse"
+              >
+                <Crown className="w-4 h-4 text-amber-600 fill-amber-300 stroke-amber-700" /> Skip Login & Continue as Guest
+              </button>
+            </div>
           </div>
         </main>
 
         {/* Footer */}
         <footer className="py-8 text-center text-xs text-gray-400 border-t border-gray-150 bg-white">
-          <p className="font-bold tracking-wide">ECOTRACE SECURITY LAYER v1.20</p>
-          <p className="text-[10px] text-gray-400 max-w-sm mx-auto mt-1 leading-normal px-2">
-            Multi-Tenant Vault Ledger Separation protects row state against unauthorized access.
+          <p className="font-extrabold tracking-wide text-gray-700">ECOTRACE • THEKEDAAR.PROD EDITION</p>
+          <p className="text-[10px] text-gray-400 max-w-sm mx-auto mt-1 leading-normal px-2 font-mono">
+            Isolated Multi-Tenant Ledger framework designed & hosted by THEKEDAAR.PROD.
           </p>
         </footer>
       </div>
@@ -820,8 +850,12 @@ export default function App() {
           <div className="flex items-center gap-3">
             {/* Active Vault Badge */}
             <div className="hidden sm:flex items-center gap-1.5 bg-stone-100 border border-stone-200 text-stone-700 px-3 py-1.5 rounded-full text-xs font-mono font-bold">
-              <Shield className="w-3.5 h-3.5 text-emerald-600 font-bold" />
-              <span>Vault: <span className="text-stone-900 font-extrabold">{activeUser}</span></span>
+              {state.isPremiumActive ? (
+                <Crown className="w-3.5 h-3.5 text-amber-500 fill-amber-300 stroke-amber-600 animate-pulse" />
+              ) : (
+                <Shield className="w-3.5 h-3.5 text-emerald-600 font-bold" />
+              )}
+              <span>User: <span className="text-stone-900 font-extrabold">{activeUser}</span>{state.isPremiumActive && <span className="text-amber-700 font-black text-[10px] uppercase ml-1">PLATINUM</span>}</span>
             </div>
 
             {state.profile ? (
@@ -920,6 +954,14 @@ export default function App() {
 
             {/* Main Charts & Wheels Component */}
             <EmissionsCharts profile={state.profile} currentActualScore={currentScore} />
+
+            {/* Premium Gold Carbon-Neutral Planner Suite */}
+            <PremiumSuite 
+              ecoState={state} 
+              onUpdateState={updateState} 
+              onPostNotification={onQuickSuccessNotification} 
+              triggerAIUpdate={triggerAIInsightsUpdate}
+            />
 
             {/* AI Custom Insights panel */}
             <div id="ai-insights-block" className="bg-gradient-to-br from-gray-900 to-slate-900 text-white rounded-3xl p-6 md:p-8 shadow-xl relative overflow-hidden">
@@ -1158,9 +1200,9 @@ export default function App() {
       </main>
 
       <footer id="global-footer" className="bg-white border-t border-gray-100 py-10 mt-16 text-center text-xs text-gray-400 space-y-2">
-        <p className="font-bold tracking-wide">ECOTRACE © 2026</p>
+        <p className="font-extrabold tracking-wide text-gray-800">ECOTRACE © 2026</p>
         <p className="max-w-md mx-auto leading-normal">
-          Designed for high tactile responsive usability. Leverages carbon standard conversion equations paired dynamically with real-time Google GenAI analysis. Done public under prompts rules.
+          Engineered and crafted by <span className="font-black text-emerald-800">THEKEDAAR.PROD</span>. All rights reserved.
         </p>
       </footer>
     </div>

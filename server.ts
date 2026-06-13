@@ -364,7 +364,11 @@ app.post('/api/insights/generate', rateLimitMiddleware, async (req, res) => {
       fitnessConnected = false, 
       transactions = [], 
       bills = [], 
-      commutes = [] 
+      commutes = [],
+      isPremiumActive = false,
+      premiumOffsets = [],
+      smartPlugsCount = 0,
+      totalSmartSavesKg = 0
     } = req.body;
 
     if (!profile) {
@@ -394,6 +398,28 @@ app.post('/api/insights/generate', rateLimitMiddleware, async (req, res) => {
           color: 'green'
         }
       ];
+
+      if (isPremiumActive && premiumOffsets.length > 0) {
+        insightsList.push({
+          id: 'insight-premium-offset',
+          type: 'insight',
+          title: 'Platinum Air Capture & Blue Carbon Active',
+          text: `Your ${premiumOffsets.length} active continuous offset subscriptions are working. High-tech Air Capture and Mangrove protection are keeping your net emissions optimized!`,
+          impactValue: `-${(premiumOffsets.length * 3.8).toFixed(1)}kg Offset/day`,
+          color: 'green'
+        });
+      }
+
+      if (isPremiumActive && smartPlugsCount > 0) {
+        insightsList.push({
+          id: 'insight-premium-iot',
+          type: 'insight',
+          title: 'IoT Standby Shutter Seals',
+          text: `Your ${smartPlugsCount} synchronized standby adapters have shuttered phantom vampire voltage drain in key electronics successfully.`,
+          impactValue: `-${totalSmartSavesKg}kg stand-by saved`,
+          color: 'green'
+        });
+      }
 
       // Add a dynamic alert if they have gas bills or driving fuel transactions
       if (utilityConnected && bills && bills.length > 0) {
@@ -443,12 +469,17 @@ app.post('/api/insights/generate', rateLimitMiddleware, async (req, res) => {
     const recentTransactions = transactions.slice(0, 5).map((t: any) => `${sanitizeInput(t.merchant)} (${sanitizeInput(t.category)}): ${t.carbonImpactKg}kg CO2`).join('\n');
     const recentCommutes = commutes.slice(0, 3).map((c: any) => `${sanitizeInput(c.mode)} for ${c.distanceMiles} miles: ${c.carbonImpactKg}kg CO2`).join('\n');
 
+    const premiumStatusString = isPremiumActive 
+      ? `ACTIVE PLATINUM PREMIUM CLIENT. Active carbon offset programs subscribed: ${premiumOffsets.join(', ')}. Sync'd home standby smart plugs count: ${smartPlugsCount} (which prevents standby draft carbon).` 
+      : `INACTIVE STANDARD TIER (Does not have continuous direct air capture or standby adapters enabled)`;
+
     const prompt = `Analyze this live eco tracker state and provide:
-      1. Exactly 3 assessable insights with types ('insight' | 'anomaly' | 'forecast'). Frame them constructively with positive reinforcement. Format with visual urgency color ('green', 'yellow', or 'red').
+      1. Exactly 3 assessable insights with types ('insight' | 'anomaly' | 'forecast'). Frame them constructively with positive reinforcement. Format with visual urgency color ('green', 'yellow', or 'red'). If premium status is active, dedicate 1 insight directly highlighting the contribution and efficiency of their high-tech continuous Direct Air Capture or blue-carbon Mangrove subscriptions!
       2. A year-end predictive carbon emissions projection (2 sentences) comparing their baseline (${profile.baselineScore} Tons) and target (${profile.targetScore} Tons) to current activity savings.
-      3. Exactly 2 custom actionable habit stack ideas based on their profile and connected automated integrations (Integrations: ${activeIntegrations}).
+      3. Exactly 2 custom actionable habit stack ideas based on their profile and connected automated integrations (Integrations: ${activeIntegrations}). Include VIP advice for optimization of their smart adapters or offset portfolios since they are premium!
 
       Current Stats:
+      - Premium Status: ${premiumStatusString}
       - Baseline Carbon: ${profile.baselineScore} Tons/year
       - Target Carbon: ${profile.targetScore} Tons/year
       - Active Habit Streaks: ${streakCount} days
