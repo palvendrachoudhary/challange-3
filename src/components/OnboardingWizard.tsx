@@ -103,7 +103,61 @@ export default function OnboardingWizard({ onOnboardingComplete }: OnboardingWiz
       const data = await response.json();
       onOnboardingComplete(data.profile, data.isFallbackActive);
     } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred during state optimization.');
+      console.warn("API compute completely failed (likely static host/Netlify), using pure local fallback logic", err);
+      
+      let home = 3.5; // Apartment default
+      if (quiz.homeSize === 'medium-house') home = 3.5;
+      if (quiz.homeSize === 'large-house') home = 5.2;
+
+      if (quiz.homeEnergy === 'electric-solar') home *= 0.15; // Solar offset
+      if (quiz.homeEnergy === 'grid-electric') home *= 0.8;
+
+      let travel = 0.5; // low travel
+      const weeklyMileage = Number(quiz.weeklyMileage) || 35;
+      const flightsPerYear = Number(quiz.flightsPerYear) || 1;
+      
+      if (quiz.commuteMode === 'car') {
+        travel += (weeklyMileage * 52 * 0.404) / 1000;
+      } else if (quiz.commuteMode === 'electric-car') {
+        travel += (weeklyMileage * 52 * 0.12) / 1000;
+      } else if (quiz.commuteMode === 'public-transit') {
+        travel += (weeklyMileage * 52 * 0.14) / 1000;
+      } else {
+        travel += 0.05;
+      }
+
+      travel += flightsPerYear * 0.8;
+
+      let food = 1.5; // balanced
+      if (quiz.diet === 'vegan') food = 0.5;
+      if (quiz.diet === 'vegetarian') food = 0.9;
+      if (quiz.diet === 'high-meat') food = 2.8;
+
+      let shopping = 1.0;
+      if (quiz.shoppingHabits === 'minimalist') shopping = 0.3;
+      if (quiz.shoppingHabits === 'frequent-buyer') shopping = 2.4;
+
+      const total = Math.round((home + travel + food + shopping) * 10) / 10;
+      const personaName = quiz.commuteMode === 'walk-cycle' ? 'Active Eco-Explorer' :
+                          quiz.diet === 'vegan' ? 'Green Plate Pioneer' : 'Mindful Consumer';
+
+      onOnboardingComplete({
+          name: personaName,
+          baselineScore: isNaN(total) ? 12.0 : total,
+          baselineBreakdown: { 
+            home: isNaN(home) ? 3.5 : Math.round(home * 10) / 10,
+            travel: isNaN(travel) ? 4.2 : Math.round(travel * 10) / 10, 
+            food: isNaN(food) ? 1.5 : Math.round(food * 10) / 10, 
+            shopping: isNaN(shopping) ? 1.8 : Math.round(shopping * 10) / 10
+          },
+          targetScore: Math.round((total * 0.75) * 10) / 10,
+          personalizedWelcome: `Welcome to EcoTrace! Based on your onboarding details, your primary impact area is **${home > travel ? 'Home Energy' : 'Travel & Commutes'}**. Fortunately, basic habits like solar/electric swaps can lower this significantly!`,
+          initialHabits: [
+            quiz.commuteMode === 'car' ? 'Walk or bike for short trips under 1.5 miles' : 'Turn down home thermostat by 1°C',
+            quiz.diet === 'high-meat' ? 'Introduce Meatless Mondays into your weekly meal planning' : 'Unplug your home electronics and game consoles before bed',
+            'Repurpose or repair one old clothing item instead of buying new'
+          ],
+      }, true);
     } finally {
       setLoading(false);
     }

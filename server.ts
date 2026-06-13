@@ -525,7 +525,7 @@ app.post('/api/insights/generate', rateLimitMiddleware, async (req, res) => {
     // Try to call Gemini, with immediate fallback on any API error or 503 overload
     try {
       const response = await ai.models.generateContent({
-        model: 'gemini-flash-latest',
+        model: 'gemini-3.5-flash',
         contents: prompt,
         config: {
           responseMimeType: 'application/json',
