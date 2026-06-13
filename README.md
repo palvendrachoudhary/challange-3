@@ -7,7 +7,7 @@ EcoTrace is a full-stack web application designed to gamify carbon footprint red
 ## 🎯 Chosen Vertical & Persona Theme
 Our solution targets **climate-conscious digital consumers, corporate wellness programs, and urban populations**. Rather than emphasizing climate guilt, EcoTrace employs **Positive Framing**—championing habits completed and carbon reduced. 
 
-Visual design is paired around a **Modern Slate and Mint Crisp Theme**, utilizing generous negative space, crisp layout rhythms, high visual scannability, and rich interactive feedback loops.
+Visual design is paired around a **Modern Slate and Mint Crisp Theme**, utilizing generous negative space, crisp layout rhythms, high visual scannability, and rich interactive feedback loops. Features a fresh, eco-friendly visually rich background graphic.
 
 ---
 

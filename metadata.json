@@ -1,6 +1,6 @@
 {
   "name": "EcoTrace",
-  "description": "EcoTrace is a full-stack, gamified carbon tracking application. It automates carbon monitoring via simulated utilities, banking, and fitness integrations, calculates personalized metrics using Google Gemini AI, and champions habit-stacking for active sustainability.",
+  "description": "EcoTrace is a full-stack, gamified carbon tracking application. It automates carbon monitoring via simulated utilities, banking, and fitness integrations, calculates personalized metrics locally, and champions habit-stacking for active sustainability.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

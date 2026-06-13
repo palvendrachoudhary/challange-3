@@ -572,7 +572,9 @@ export default function App() {
   // AUTHENTICATION VISUAL INTERFACE INTERCEPTOR
   if (!isLoggedIn) {
     return (
-      <div id="ecotrace-auth-root" className="min-h-screen bg-stone-50 flex flex-col justify-between text-gray-800 antialiased font-sans">
+      <div id="ecotrace-auth-root" className="min-h-screen bg-[url('/eco-bg.jpg')] bg-cover bg-center bg-fixed flex flex-col justify-between text-gray-800 antialiased font-sans relative">
+        <div className="absolute inset-0 bg-emerald-900/10 backdrop-blur-[2px] pointer-events-none z-0"></div>
+        <div className="relative z-10 flex flex-col min-h-screen justify-between">
         
         {/* Toast Toast Notifications */}
         {achievementMsg && (
@@ -583,7 +585,7 @@ export default function App() {
         )}
 
         {/* Minimal header */}
-        <header className="px-6 py-5 border-b border-gray-150 bg-white">
+        <header className="px-6 py-5 border-b border-gray-150 bg-white/80 backdrop-blur-md">
           <div className="max-w-7xl mx-auto flex justify-between items-center">
             <div className="flex items-center gap-2.5">
               <div className="p-2 bg-gradient-to-tr from-emerald-600 to-teal-500 text-white rounded-xl shadow-md">
@@ -604,7 +606,7 @@ export default function App() {
 
         {/* Auth card content */}
         <main className="flex-1 flex items-center justify-center p-6 my-8">
-          <div className="w-full max-w-sm bg-white border border-gray-200/80 rounded-3xl p-8 shadow-sm space-y-6">
+          <div className="w-full max-w-sm bg-white/85 backdrop-blur-xl border border-white/50 rounded-3xl p-8 shadow-xl space-y-6">
             <div className="text-center space-y-2">
               <div className="inline-flex p-3 bg-emerald-50 text-emerald-700 rounded-full">
                 <Shield className="w-6 h-6" />
@@ -818,19 +820,22 @@ export default function App() {
         </main>
 
         {/* Footer */}
-        <footer className="py-8 text-center text-xs text-gray-400 border-t border-gray-150 bg-white">
-          <p className="font-extrabold tracking-wide text-gray-700">ECOTRACE • PAL</p>
+        <footer className="py-8 text-center text-xs text-gray-800 font-medium border-t border-gray-200/50 bg-white/80 backdrop-blur-md">
+          <p className="font-extrabold tracking-wide text-gray-900">ECOTRACE • PAL</p>
           <p className="text-[10px] text-gray-400 max-w-sm mx-auto mt-1 leading-normal px-2 font-mono">
             Isolated Multi-Tenant Ledger framework designed & hosted by PAL.
           </p>
         </footer>
+        </div>
       </div>
     );
   }
 
   return (
-    <div id="ecotrace-app-main-root" className="min-h-screen bg-neutral-50 text-gray-800 antialiased font-sans">
+    <div id="ecotrace-app-main-root" className="min-h-screen bg-[url('/eco-bg.jpg')] bg-cover bg-center bg-fixed text-gray-800 antialiased font-sans relative">
+      <div className="absolute inset-0 bg-emerald-950/20 backdrop-blur-[2px] pointer-events-none z-0"></div>
       
+      <div className="relative z-10 flex flex-col min-h-screen">
       {/* Dynamic Flash Notifications Banner */}
       {achievementMsg && (
         <div id="toast-notif-bar" className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-emerald-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-2 border border-emerald-500/30 animate-bounce">
@@ -840,7 +845,7 @@ export default function App() {
       )}
 
       {/* Global Navigation Header */}
-      <header id="global-header" className="sticky top-0 z-45 bg-white/95 backdrop-blur border-b border-gray-100 px-6 py-4">
+      <header id="global-header" className="sticky top-0 z-45 bg-white/85 backdrop-blur-xl border-b border-white/20 px-6 py-4 shadow-sm">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-gradient-to-tr from-emerald-600 to-teal-500 text-white rounded-xl shadow-md">
@@ -942,7 +947,7 @@ export default function App() {
           <div id="onboarded-workspace" className="space-y-8 animate-fade-in">
 
             {/* Profile Intro Greeting Badge */}
-            <div id="welcome-profile-card" className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div id="welcome-profile-card" className="bg-white/90 backdrop-blur-md border border-white/40 rounded-3xl p-6 shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div className="space-y-1">
                 <span className="text-[10px] font-bold text-emerald-600 tracking-widest uppercase">Environmental Status: **{state.profile.name}**</span>
                 <h2 className="text-xl font-extrabold text-gray-900">Your Carbon Footprint Matrix</h2>
@@ -1057,7 +1062,7 @@ export default function App() {
             {/* Quick Actions & Habits Loggers column split */}
             <div id="habit-management-cols" className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Left Column: Habits checklist */}
-              <div id="habits-checklist-box" className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm space-y-5">
+              <div id="habits-checklist-box" className="bg-white/90 backdrop-blur-md border border-white/40 rounded-3xl p-6 shadow-lg space-y-5">
                 <div>
                   <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Daily Eco Habits Tracker</h3>
                   <p className="text-xs text-gray-400 mt-1">Check completed daily actions to count points and live-calculate saved carbon offset</p>
@@ -1123,7 +1128,7 @@ export default function App() {
               </div>
 
               {/* Right Column: Simulated Integrations Manual triggers */}
-              <div id="manual-insights-box" className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm space-y-6">
+              <div id="manual-insights-box" className="bg-white/90 backdrop-blur-md border border-white/40 rounded-3xl p-6 shadow-lg space-y-6">
                 <div>
                   <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Manual Food & Commute Quick-Logs</h3>
                   <p className="text-xs text-gray-400 mt-1">Don't have automations connected? Use manual quick-log widgets in under 5 seconds</p>
@@ -1206,12 +1211,13 @@ export default function App() {
         )}
       </main>
 
-      <footer id="global-footer" className="bg-white border-t border-gray-100 py-10 mt-16 text-center text-xs text-gray-400 space-y-2">
-        <p className="font-extrabold tracking-wide text-gray-800">ECOTRACE © 2026</p>
+      <footer id="global-footer" className="bg-white/80 backdrop-blur-md border-t border-white/40 py-10 mt-16 text-center text-xs text-gray-700 font-medium space-y-2 relative z-10 w-full mb-0">
+        <p className="font-extrabold tracking-wide text-gray-900">ECOTRACE © 2026</p>
         <p className="max-w-md mx-auto leading-normal">
-          Engineered and crafted by <span className="font-black text-emerald-800">PAL</span>. All rights reserved.
+          Engineered and crafted by <span className="font-black text-emerald-900">PAL</span>. All rights reserved.
         </p>
       </footer>
+    </div>
     </div>
   );
 }
