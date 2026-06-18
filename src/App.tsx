@@ -15,6 +15,8 @@ import CommunityShop from './components/CommunityShop';
 import PremiumSuite from './components/PremiumSuite';
 import SmartAssistant from './components/SmartAssistant';
 import EcoTipsModal from './components/EcoTipsModal';
+import ComprehensiveCalculator from './components/ComprehensiveCalculator';
+import WorldEmissionsMeter from './components/WorldEmissionsMeter';
 import { 
   deriveTenantRowKey, 
   signState, 
@@ -194,7 +196,7 @@ export default function App() {
   const [customActionCategory, setCustomActionCategory] = useState<'home' | 'travel' | 'food' | 'shopping'>('home');
   const [habitFilter, setHabitFilter] = useState<'all' | 'home' | 'travel' | 'food' | 'shopping'>('all');
   const [hasCelebratedDailyGoal, setHasCelebratedDailyGoal] = useState(false);
-  const [activeDashboardTab, setActiveDashboardTab] = useState<'dashboard' | 'insights' | 'premium' | 'integrations' | 'community' | 'audit'>('dashboard');
+  const [activeDashboardTab, setActiveDashboardTab] = useState<'dashboard' | 'insights' | 'premium' | 'integrations' | 'community' | 'audit' | 'deep-audit'>('dashboard');
 
   useEffect(() => {
     if (!state.profile) return;
@@ -1145,7 +1147,23 @@ export default function App() {
               >
                 <Lightbulb className="w-4 h-4" /> Setup Profile
               </button>
+              <button
+                role="tab"
+                aria-selected={activeDashboardTab === 'deep-audit'}
+                onClick={() => setActiveDashboardTab('deep-audit')}
+                className={`flex-1 py-2.5 px-4 text-xs font-bold rounded-xl transition-all whitespace-nowrap flex items-center justify-center gap-2 ${
+                  activeDashboardTab === 'deep-audit' ? 'bg-emerald-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-emerald-600 dark:hover:text-emerald-400'
+                }`}
+              >
+                <Activity className="w-4 h-4" /> Deep Calculator
+              </button>
             </div>
+
+            {activeDashboardTab === 'deep-audit' && (
+               <div id="deep-audit-workspace" className="space-y-12 py-6">
+                 <ComprehensiveCalculator />
+               </div>
+            )}
 
             {activeDashboardTab === 'audit' && (
               <div id="un-onboarded-workspace" className="space-y-12 py-6">
@@ -1166,6 +1184,10 @@ export default function App() {
 
             {activeDashboardTab === 'dashboard' && (
               <div className="space-y-8 animate-fade-in">
+                
+                {/* World Emissions Real-Time Meter */}
+                <WorldEmissionsMeter />
+
                 {/* Profile Intro Greeting Badge */}
             <div id="welcome-profile-card" className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border border-white/40 dark:border-gray-700 rounded-3xl shadow-lg flex flex-col overflow-hidden">
               <div className="p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
